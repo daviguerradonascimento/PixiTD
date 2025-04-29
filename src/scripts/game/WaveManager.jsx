@@ -1,0 +1,57 @@
+// WaveManager.js
+import { Enemy } from "./Enemy.jsx";
+
+export class WaveManager {
+  constructor(app, onEnemySpawned) {
+    this.app = app;
+    this.onEnemySpawned = onEnemySpawned;
+    this.currentWave = 0;
+    this.activeEnemies = [];
+
+    this.waves = [
+      { enemies: [ "basic", "basic", "basic", "fast", "basic" ], interval: 1000 },
+      { enemies: [ "fast", "fast", "basic", "tank", "basic" ], interval: 900 },
+      { enemies: [ "tank", "tank", "fast", "fast", "basic", "basic" ], interval: 800 },
+    ];
+  }
+
+  start() {
+    this.spawnWave(this.currentWave);
+  }
+
+  spawnWave(index) {
+    const wave = this.waves[index];
+    if (!wave) return;
+
+    let i = 0;
+    const timer = setInterval(() => {
+      if (i >= wave.enemies.length) {
+        clearInterval(timer);
+        this.currentWave++;
+        setTimeout(() => this.spawnWave(this.currentWave), 5000);
+        return;
+      }
+
+      const enemy = new Enemy(wave.enemies[i]);
+      this.activeEnemies.push(enemy);
+      this.app.stage.addChild(enemy);
+      this.onEnemySpawned?.(enemy);
+      i++;
+    }, wave.interval);
+  }
+
+  update() {
+    for (let i = this.activeEnemies.length - 1; i >= 0; i--) {
+      const enemy = this.activeEnemies[i];
+      if (!enemy.destroyed) {
+        enemy.update();
+      } else {
+        this.activeEnemies.splice(i, 1);
+      }
+    }
+  }
+
+  getEnemies() {
+    return this.activeEnemies;
+  }
+}
