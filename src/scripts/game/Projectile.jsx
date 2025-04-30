@@ -13,7 +13,7 @@ export class Projectile extends PIXI.Graphics {
     this.speed = 3;
   }
 
-  update() {
+  update(gameSpeed) {
     if (!this.target || this.target.destroyed) {
       this.destroy();
       return;
@@ -23,13 +23,13 @@ export class Projectile extends PIXI.Graphics {
     const dy = this.target.y - this.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
 
-    if (dist < this.speed) {
+    if (dist < (this.speed * gameSpeed)) {
       this.target.takeDamage(10);
       this.destroy();
       return;
     }
-
-    this.x += (dx / dist) * this.speed;
-    this.y += (dy / dist) * this.speed;
+    
+    this.x += (dx / dist) * (this.speed * gameSpeed);
+    this.y += (dy / dist) * (this.speed * gameSpeed);
   }
 }

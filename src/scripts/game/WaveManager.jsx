@@ -8,6 +8,7 @@ export class WaveManager {
     this.onEnemyReachedBase = onEnemyReachedBase;
     this.currentWave = 0;
     this.activeEnemies = [];
+    this.isSpawning = false;
 
     this.waves = [
       { enemies: ["basic", "basic", "basic"], interval: 1000 },
@@ -23,13 +24,13 @@ export class WaveManager {
   spawnWave(index) {
     const wave = this.waves[index];
     if (!wave) return;
-
+    this.isSpawning = true;
     let i = 0;
     const timer = setInterval(() => {
       if (i >= wave.enemies.length) {
         clearInterval(timer);
         this.currentWave++;
-        setTimeout(() => this.spawnWave(this.currentWave), 5000);
+        this.isSpawning = false;
         return;
       }
 
@@ -51,10 +52,10 @@ export class WaveManager {
     }, wave.interval);
   }
 
-  update() {
+  update(gameSpeed) {
     for (let i = this.activeEnemies.length - 1; i >= 0; i--) {
       const enemy = this.activeEnemies[i];
-      enemy.update();
+      enemy.update(gameSpeed);
     }
   }
 
@@ -65,5 +66,9 @@ export class WaveManager {
 
   getEnemies() {
     return this.activeEnemies;
+  }
+
+  isWaveComplete() {
+    return this.activeEnemies.length === 0 && this.isSpawning === false;
   }
 }

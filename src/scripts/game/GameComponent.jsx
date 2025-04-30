@@ -7,6 +7,7 @@ import { WaveManager } from "./WaveManager.jsx";
 import asteroidImage from "../../sprites/basic.png";
 import sniperImage from "../../sprites/sniper.png";
 import { toIsometric, screenToGrid, getBlockedTiles, drawIsometricGrid, gridConsts } from "./gridUtils";
+import Tooltip from "./Tooltip.jsx";
 
 export default function TowerDefenseGame() {
   const pixiContainerRef = useRef(null);
@@ -20,6 +21,16 @@ export default function TowerDefenseGame() {
   const [gameState, setGameState] = useState("build"); // "build" or "wave"
   const gameStateRef = useRef(null);
   const waveManagerRef = useRef(null); // Ref for WaveManager
+  const [currentWave, setCurrentWave] = useState(1);
+  const [gameSpeed, setGameSpeed] = useState(1);
+  const [gameOver, setGameOver] = useState(false);
+
+  const [tooltip, setTooltip] = useState({
+    visible: false,
+    x: 0,
+    y: 0,
+    stats: {},
+  });
 
   useEffect(() => {
     selectedTowerTypeRef.current = selectedTowerType;
@@ -73,12 +84,33 @@ export default function TowerDefenseGame() {
         handlePlacement(col, row, stage, placedTowers, projectileContainer), waypointGridCoords
       );
 
+
       app.ticker.add(() => {
-        waveManagerRef.current.update();
-        placedTowers.forEach((tower) => tower.update(waveManagerRef.current.getEnemies()));
-        projectileContainer.children.forEach((proj) => proj.update?.());
+        waveManagerRef.current.update(app.ticker.speed);
+        placedTowers.forEach((tower) => tower.update(waveManagerRef.current.getEnemies(), app.ticker.speed));
+        projectileContainer.children.forEach((proj) => proj.update?.(app.ticker.speed));
         stage.children.sort((a, b) => a.y - b.y); // depth sorting
+
+        if (gameStateRef.current === "wave" && waveManagerRef.current.isWaveComplete()) {
+          setGameState("build");
+          clearProjectiles();
+          setCurrentWave(waveManagerRef.current.currentWave + 1);
+        }
+
+        if (baseHealth <= 0) {
+          setGameOver(true);
+          setGameState("gameOver");
+        } else if (waveManagerRef.current.currentWave >= waveManagerRef.current.waves.length && waveManagerRef.current.isWaveComplete()) {
+          setGameOver(true);
+          setTooltip({ visible: false});
+          setGameState("win");
+        }
+
       });
+
+      const clearProjectiles = () => {
+        projectileContainer.removeChildren();
+      };
 
       const resizeGame = () => {
         const container = pixiContainerRef.current;
@@ -141,6 +173,13 @@ export default function TowerDefenseGame() {
       selectedTowerRef.current = towerInstance;
       setSelectedTower(towerInstance);
     };
+    tower.onHover = (stats, x, y) => {
+      if (gameStateRef.current === "gameOver") setTooltip({ visible: false, x, y, stats });;
+      setTooltip({ visible: true, x, y, stats });
+    };
+    tower.onOut = () => {
+      setTooltip({ ...tooltip, visible: false });
+    };
     stage.addChild(tower);
     placedTowers.push(tower);
   };
@@ -159,8 +198,35 @@ export default function TowerDefenseGame() {
     }
   }, [gameState]);
 
+  useEffect(() => {
+    if (appRef.current) {
+      appRef.current.ticker.speed = gameSpeed;
+    }
+  }, [gameSpeed]);
+
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
+
+      {gameOver && (
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              backgroundColor: "rgba(0, 0, 0, 0.8)",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              fontSize: "3em",
+              color: "white",
+              zIndex: 20,
+            }}
+          >
+            {gameState === "gameOver" ? "Game Over!" : "You Win!"}
+          </div>
+        )}
       <div style={{ position: "absolute", top: 10, left: 10, zIndex: 10 }}>
         {["basic", "sniper", "rapid", "splash"].map((type) => (
           <button
@@ -196,6 +262,22 @@ export default function TowerDefenseGame() {
         >
           Start Wave
         </button>
+
+        <button
+          onClick={() => setGameSpeed(gameSpeed === 1 ? 2 : 1)}
+          style={{
+            padding: "6px 12px",
+            backgroundColor: "#ccc",
+            color: "#000",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontWeight: "bold",
+            marginRight: "4px",
+          }}
+        >
+          Speed: {gameSpeed}x
+        </button>
       </div>
 
       <div style={{ position: "absolute", top: 40, left: 10, zIndex: 10, color: "red" }}>
@@ -204,6 +286,10 @@ export default function TowerDefenseGame() {
       <div style={{ position: "absolute", top: 70, left: 10, zIndex: 10, color: "yellow" }}>
         Gold: {gold}
       </div>
+      <div style={{ position: "absolute", top: 100, left: 10, zIndex: 10, color: "white" }}>
+        Wave: {currentWave}
+      </div>
+      
 
       {selectedTowerRef.current && (
         <div style={{ position: "absolute", top: 10, right: 10, zIndex: 10 }}>
@@ -228,7 +314,7 @@ export default function TowerDefenseGame() {
           </button>
         </div>
       )}
-
+      {tooltip.visible && <Tooltip x={tooltip.x} y={tooltip.y} stats={tooltip.stats}/>}
       <div ref={pixiContainerRef} style={{ width: "100%", height: "100%" }} />
     </div>
   );

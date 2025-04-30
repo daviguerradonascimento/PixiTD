@@ -42,11 +42,12 @@ export class Tower extends PIXI.Container {
 
     this.position.set(x, y );
     this.on("pointerdown", () => {
-      this.range.visible = !this.range.visible;
       this.setSelected(!this.isSelected);
       if (this.onSelect) this.onSelect(this);
     });
-    this.on("pointerout", () => (this.range.visible = false));
+    // this.on("pointerout", () => (this.range.visible = false));
+    this.on("pointerover", this.onTowerHover);
+    this.on("pointerout", this.onTowerOut);
   }
 
   drawLevelText() {
@@ -96,6 +97,7 @@ export class Tower extends PIXI.Container {
 
   setSelected(isSelected) {
     this.isSelected = isSelected;
+    this.range.visible = isSelected;
     this.drawHighlight(); // Update highlight visibility
   }
 
@@ -128,8 +130,8 @@ export class Tower extends PIXI.Container {
     }
   }
 
-  update(enemies) {
-    if (this.fireTimer > 0) {
+  update(enemies, gameSpeed) {
+    if ((this.fireTimer/gameSpeed) > 0) {
       this.fireTimer--;
       return;
     }
@@ -163,5 +165,29 @@ export class Tower extends PIXI.Container {
       const projectile = new Projectile(this.x, this.y, enemy);
       this.projectileContainer.addChild(projectile);
     }
+  }
+
+  onTowerHover = (event) => {
+    this.isHovered = true;
+    if (this.onHover) {
+      this.onHover(this.getTowerStats(), event.data.global.x, event.data.global.y);
+    }
+  };
+  
+  onTowerOut = () => {
+    this.isHovered = false;
+    if (this.onOut) {
+      this.onOut();
+    }
+  };
+  
+  getTowerStats() {
+    return {
+      type: this.type,
+      level: this.level,
+      range: this.rangeSize,
+      cooldown: this.cooldown,
+      upgradeCost: this.baseStats.upgradeCost,
+    };
   }
 }

@@ -58,6 +58,7 @@ export class Enemy extends PIXI.Graphics {
 
     }
 
+    
     this.waypointIndex = 0;
     this.position.set(waypoints[0].x, waypoints[0].y);
 
@@ -80,13 +81,13 @@ export class Enemy extends PIXI.Graphics {
     this.updateHpBar();
   }
 
-  update() {
+  update(gameSpeed) {
     const target = waypoints[this.waypointIndex];
     const dx = target.x - this.x;
     const dy = target.y - this.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
 
-    if (dist < this.speed) {
+    if (dist < (this.speed * gameSpeed)) {
       this.x = target.x;
       this.y = target.y;
       this.waypointIndex++;
@@ -96,8 +97,8 @@ export class Enemy extends PIXI.Graphics {
         return;
       }
     } else {
-      this.x += (dx / dist) * this.speed;
-      this.y += (dy / dist) * this.speed;
+      this.x += (dx / dist) * (this.speed * gameSpeed);
+      this.y += (dy / dist) * (this.speed * gameSpeed);
     }
 
     this.updateHpBar();
