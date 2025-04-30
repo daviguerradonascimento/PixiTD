@@ -1,6 +1,14 @@
 import * as PIXI from "pixi.js";
 
-const GRID_SIZE = 64;
+import { GRID_COLS, GRID_ROWS, GRID_SIZE, TILE_HEIGHT } from "./gridUtils.js";
+
+const offsetX = ((GRID_COLS + GRID_ROWS) * (GRID_SIZE / 2)) / 2;
+
+function toIsometric(col, row) {
+  const x = (col - row) * (GRID_SIZE / 2);
+  const y = (col + row) * (GRID_SIZE / 4);
+  return { x, y };
+}
 
 export const waypointGridCoords = [
   [0, 1],
@@ -12,10 +20,13 @@ export const waypointGridCoords = [
   [10, 1]
 ];
 
-export const waypoints = waypointGridCoords.map(([col, row]) => ({
-  x: col * GRID_SIZE + GRID_SIZE / 2,
-  y: row * GRID_SIZE + GRID_SIZE / 2
-}));
+export const waypoints = waypointGridCoords.map(([col, row]) => {
+  const { x, y } = toIsometric(col, row);
+  return {
+    x: x + offsetX + (TILE_HEIGHT / 2),
+    y: y + (TILE_HEIGHT / 4)
+  };
+});
 
 export class Enemy extends PIXI.Graphics {
   constructor(type = "basic", onDeath = () => {}, onReachedBase = () => {}) {
@@ -55,7 +66,7 @@ export class Enemy extends PIXI.Graphics {
     
     this.body = new PIXI.Graphics();
     this.body.fill(this.color);
-    this.body.circle(0, 0, 16);
+    this.body.circle(0, 0, (TILE_HEIGHT / 2));
     this.body.fill();
     this.addChild(this.body);
 
@@ -107,7 +118,7 @@ export class Enemy extends PIXI.Graphics {
 
   updateHpBar() {
     // this.hpBar.clear();
-    const barWidth = 32;
+      const barWidth = 32;
       const barHeight = 5;
   
       this.hpBarBackground.clear();

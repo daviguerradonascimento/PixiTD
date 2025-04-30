@@ -1,33 +1,46 @@
 import * as PIXI from "pixi.js";
 import { Projectile } from "./Projectile.jsx";
+import { TILE_WIDTH, TILE_HEIGHT } from "./gridUtils.js";
 
-export class Tower extends PIXI.Graphics {
+export class Tower extends PIXI.Container {
   constructor(x, y, projectileContainer, type = "basic") {
     super();
+    // super();
     this.type = type;
     this.level = 1;
     this.isSelected = false;
     this.highlight = new PIXI.Graphics();
 
+
     this.baseStats = {
-      basic: { color: 0x3399ff, range: 100, cooldown: 60, upgradeCost: 50 },
-      sniper: { color: 0xffcc00, range: 200, cooldown: 120, upgradeCost: 80 },
-      rapid: { color: 0x00ff99, range: 80, cooldown: 20, upgradeCost: 60 },
-      splash: { color: 0xff3333, range: 100, cooldown: 80, upgradeCost: 70 },
+      basic: { texture: "assets/asteroid.png",color: 0x3399ff, range: 100, cooldown: 60, upgradeCost: 50 },
+      sniper: { texture: "basicTower.png",color: 0xffcc00, range: 200, cooldown: 120, upgradeCost: 80 },
+      rapid: { texture: "basicTower.png",color: 0x00ff99, range: 80, cooldown: 20, upgradeCost: 60 },
+      splash: { texture: "basicTower.png",color: 0xff3333, range: 100, cooldown: 80, upgradeCost: 70 },
     }[type];
 
     this.projectileContainer = projectileContainer;
     this.fireTimer = 0;
 
-    this.position.set(x, y);
+    
     this.interactive = true;
     this.buttonMode = true;
     this.levelText = null;
 
-    this.drawTower();
+    const towerTexture = PIXI.Texture.from(type);
+    this.towerSprite = new PIXI.Sprite(towerTexture);
+    this.towerSprite.anchor.set(0.5, 0.5);
+    const scale = Math.min(TILE_WIDTH / this.towerSprite.width, TILE_HEIGHT / this.towerSprite.height);
+    this.towerSprite.scale.set(scale);
+    this.addChild(this.towerSprite);
+
+    this.position.set(x, y);  // Set the position of the tow
+
+    this.drawLevelText();
     this.createRangeCircle();
     this.drawHighlight(); 
 
+    this.position.set(x, y );
     this.on("pointerdown", () => {
       this.range.visible = !this.range.visible;
       this.setSelected(!this.isSelected);
@@ -36,24 +49,18 @@ export class Tower extends PIXI.Graphics {
     this.on("pointerout", () => (this.range.visible = false));
   }
 
-  drawTower() {
-    this.clear();
-    this.fill(this.baseStats.color);
-    this.rect(-16, -16, 32, 32);
-    this.fill();
-
+  drawLevelText() {
     if (this.levelText) {
       this.removeChild(this.levelText);
       this.levelText.destroy();
     }
 
-    // Optional: level label
-    const style = new PIXI.TextStyle({ fontSize: 10, fill: 0xffffff });
-    const levelText = new PIXI.Text(`Lv${this.level}`, style);
+    const style = new PIXI.TextStyle({ fontSize: 12, fill: 0x000000 });
+    const levelText = new PIXI.Text({text:`Lv${this.level}`, style:style});
     levelText.anchor.set(0.5);
-    levelText.position.set(0, -24);
+    levelText.position.set(0, TILE_HEIGHT * 0.1); // Position below the tower
     this.addChild(levelText);
-    this.levelText  = levelText;
+    this.levelText = levelText;
   }
 
   createRangeCircle() {
@@ -71,10 +78,19 @@ export class Tower extends PIXI.Graphics {
   drawHighlight() {
     this.highlight.clear();
     if (this.isSelected) {
-      this.highlight.setStrokeStyle(2, 0xffff00); // Yellow border
-      this.highlight.rect(-18, -18, 36, 36); // Slightly larger than the tower
+      const halfW = 32;
+      const halfH = 16;
+      this.highlight.setStrokeStyle({ width: 2, color: 0xffff00 });
+      this.highlight.moveTo(0, -halfH );       
+      this.highlight.lineTo(halfW, 0 );        
+      this.highlight.lineTo(0, halfH );        
+      this.highlight.lineTo(-halfW, 0 );       
+      this.highlight.lineTo(0, -halfH );  
+      // this.highlight.rect(0 , 0, 36, 36);
+      this.highlight.stroke();
+      // this.highlight.fill();
     }
-    this.highlight.visible = this.isSelected; // Only show when selected
+    this.highlight.visible = this.isSelected;
     this.addChild(this.highlight);
   }
 
@@ -104,7 +120,7 @@ export class Tower extends PIXI.Graphics {
       this.range.fill();
       
       this.setSelected(!this.isSelected);
-      this.drawTower(); // Redraw with new level
+      this.drawLevelText(); // Redraw with new level
     } 
     else {
       console.log("Not enough gold to upgrade!");
