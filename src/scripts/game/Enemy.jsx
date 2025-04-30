@@ -18,7 +18,7 @@ export const waypoints = waypointGridCoords.map(([col, row]) => ({
 }));
 
 export class Enemy extends PIXI.Graphics {
-  constructor(type = "basic") {
+  constructor(type = "basic", onDeath = () => {}, onReachedBase = () => {}) {
     super();
 
     this.type = type;
@@ -26,22 +26,33 @@ export class Enemy extends PIXI.Graphics {
     this.maxHp = 100;
     this.hp = 100;
     this.color = 0xff3333;
+    this.goldValue = 10;
+    this.damageValue = 1;
 
     if (type === "fast") {
       this.speed = 2;
       this.color = 0x33ccff;
       this.maxHp = 50;
       this.hp = 50;
+      this.goldValue = 5;
+      this.damageValue = 0.5;
+
     } else if (type === "tank") {
       this.speed = 0.5;
       this.color = 0x9966ff;
       this.maxHp = 200;
       this.hp = 200;
+      this.goldValue = 15;
+      this.damageValue = 2;
+
     }
 
     this.waypointIndex = 0;
     this.position.set(waypoints[0].x, waypoints[0].y);
 
+    this.onDeath = typeof onDeath === "function" ? onDeath : () => {};
+    this.onReachedBase = typeof onReachedBase === "function" ? onReachedBase : () => {};
+    
     this.body = new PIXI.Graphics();
     this.body.beginFill(this.color);
     this.body.drawCircle(0, 0, 16);
@@ -69,6 +80,7 @@ export class Enemy extends PIXI.Graphics {
       this.y = target.y;
       this.waypointIndex++;
       if (this.waypointIndex >= waypoints.length) {
+        this.onReachedBase?.(this);
         this.destroy(); // Reached base
         return;
       }
@@ -87,6 +99,7 @@ export class Enemy extends PIXI.Graphics {
     // console.log(`Enemy took ${amount} damage, remaining HP: ${this.hp}`);
     if (this.hp <= 0) {
       // console.log('Enemy destroyed');
+      this.onDeath();
       this.destroy();
     }
   }
