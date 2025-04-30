@@ -2,7 +2,7 @@ import * as PIXI from "pixi.js";
 
 const GRID_SIZE = 64;
 
-export const waypoints = [
+export const waypointGridCoords = [
   [0, 1],
   [1, 1],
   [2, 1],
@@ -10,7 +10,9 @@ export const waypoints = [
   [7, 4],
   [7, 1],
   [10, 1]
-].map(([col, row]) => ({
+];
+
+export const waypoints = waypointGridCoords.map(([col, row]) => ({
   x: col * GRID_SIZE + GRID_SIZE / 2,
   y: row * GRID_SIZE + GRID_SIZE / 2
 }));
@@ -82,9 +84,9 @@ export class Enemy extends PIXI.Graphics {
     this.hp -= amount;
     this.flashHit();
     this.updateHpBar();
-    console.log(`Enemy took ${amount} damage, remaining HP: ${this.hp}`);
+    // console.log(`Enemy took ${amount} damage, remaining HP: ${this.hp}`);
     if (this.hp <= 0) {
-      console.log('Enemy destroyed');
+      // console.log('Enemy destroyed');
       this.destroy();
     }
   }
@@ -116,7 +118,6 @@ export class Enemy extends PIXI.Graphics {
       this.hpBarBackground.endFill();
   
       const hpPercent = Math.max(0, this.hp / this.maxHp);
-      console.log(this.hp, this.maxHP);
       this.hpBarFill.clear();
       this.hpBarFill.beginFill(0x00ff00);
       this.hpBarFill.drawRect(-barWidth / 2, -26, barWidth * hpPercent, barHeight);
