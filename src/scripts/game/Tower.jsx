@@ -38,9 +38,9 @@ export class Tower extends PIXI.Graphics {
 
   drawTower() {
     this.clear();
-    this.beginFill(this.baseStats.color);
-    this.drawRect(-16, -16, 32, 32);
-    this.endFill();
+    this.fill(this.baseStats.color);
+    this.rect(-16, -16, 32, 32);
+    this.fill();
 
     if (this.levelText) {
       this.removeChild(this.levelText);
@@ -61,9 +61,9 @@ export class Tower extends PIXI.Graphics {
     this.cooldown = this.getStat("cooldown");
 
     this.range = new PIXI.Graphics();
-    this.range.beginFill(this.baseStats.color, 0.1);
-    this.range.drawCircle(0, 0, this.rangeSize);
-    this.range.endFill();
+    this.range.fill({color:this.baseStats.color, alpha: 0.1});
+    this.range.circle(0, 0, this.rangeSize);
+    this.range.fill();
     this.range.visible = false;
     this.addChild(this.range);
   }
@@ -71,8 +71,8 @@ export class Tower extends PIXI.Graphics {
   drawHighlight() {
     this.highlight.clear();
     if (this.isSelected) {
-      this.highlight.lineStyle(2, 0xffff00); // Yellow border
-      this.highlight.drawRect(-18, -18, 36, 36); // Slightly larger than the tower
+      this.highlight.setStrokeStyle(2, 0xffff00); // Yellow border
+      this.highlight.rect(-18, -18, 36, 36); // Slightly larger than the tower
     }
     this.highlight.visible = this.isSelected; // Only show when selected
     this.addChild(this.highlight);
@@ -99,9 +99,9 @@ export class Tower extends PIXI.Graphics {
       this.cooldown = this.getStat("cooldown");
 
       this.range.clear();
-      this.range.beginFill(this.baseStats.color, 0.1);
-      this.range.drawCircle(0, 0, this.rangeSize);
-      this.range.endFill();
+      this.range.fill({color:this.baseStats.color, alpha: 0.1});
+      this.range.circle(0, 0, this.rangeSize);
+      this.range.fill();
       
       this.setSelected(!this.isSelected);
       this.drawTower(); // Redraw with new level

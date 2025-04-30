@@ -54,9 +54,9 @@ export class Enemy extends PIXI.Graphics {
     this.onReachedBase = typeof onReachedBase === "function" ? onReachedBase : () => {};
     
     this.body = new PIXI.Graphics();
-    this.body.beginFill(this.color);
-    this.body.drawCircle(0, 0, 16);
-    this.body.endFill();
+    this.body.fill(this.color);
+    this.body.circle(0, 0, 16);
+    this.body.fill();
     this.addChild(this.body);
 
     // this.hpBar = new PIXI.Graphics();
@@ -104,21 +104,6 @@ export class Enemy extends PIXI.Graphics {
     }
   }
 
-  // drawHPBar() {
-  //   const barWidth = 32;
-  //   const barHeight = 5;
-
-  //   this.hpBarBackground.clear();
-  //   this.hpBarBackground.beginFill(0x000000);
-  //   this.hpBarBackground.drawRect(-barWidth / 2, -26, barWidth, barHeight);
-  //   this.hpBarBackground.endFill();
-
-  //   const hpPercent = Math.max(0, this.hp / this.maxHP);
-  //   this.hpBarFill.clear();
-  //   this.hpBarFill.beginFill(0x00ff00);
-  //   this.hpBarFill.drawRect(-barWidth / 2, -26, barWidth * hpPercent, barHeight);
-  //   this.hpBarFill.endFill();
-  // }
 
   updateHpBar() {
     // this.hpBar.clear();
@@ -126,15 +111,15 @@ export class Enemy extends PIXI.Graphics {
       const barHeight = 5;
   
       this.hpBarBackground.clear();
-      this.hpBarBackground.beginFill(0x000000);
-      this.hpBarBackground.drawRect(-barWidth / 2, -26, barWidth, barHeight);
-      this.hpBarBackground.endFill();
+      this.hpBarBackground.fill(0x000000);
+      this.hpBarBackground.rect(-barWidth / 2, -26, barWidth, barHeight);
+      this.hpBarBackground.fill();
   
       const hpPercent = Math.max(0, this.hp / this.maxHp);
       this.hpBarFill.clear();
-      this.hpBarFill.beginFill(0x00ff00);
-      this.hpBarFill.drawRect(-barWidth / 2, -26, barWidth * hpPercent, barHeight);
-      this.hpBarFill.endFill();
+      this.hpBarFill.fill(0x00ff00);
+      this.hpBarFill.rect(-barWidth / 2, -26, barWidth * hpPercent, barHeight);
+      this.hpBarFill.fill();
   }
 
   flashHit() {

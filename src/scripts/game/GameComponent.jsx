@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import * as PIXI from "pixi.js";
 import { Enemy, waypoints, waypointGridCoords } from "./Enemy.jsx";
 import { Tower } from "./Tower.jsx";
@@ -13,184 +13,179 @@ export default function TowerDefenseGame() {
   const selectedTowerRef = useRef(null);
 
   const [baseHealth, setBaseHealth] = useState(10);
-  const [gold, setGold] = useState(100); 
+  const [gold, setGold] = useState(100);
 
   useEffect(() => {
     selectedTowerTypeRef.current = selectedTowerType;
   }, [selectedTowerType]);
 
-  useEffect(() => {
-    const app = new PIXI.Application({
-      resizeTo: window,
-      backgroundColor: 0x222222,
-      antialias: true,
-    });
-    appRef.current = app;
-    pixiContainer.current.appendChild(app.view);
+  const initializePixi = useCallback(() => {
+    if (pixiContainer.current && !appRef.current) {
+      try {
+        const app = new PIXI.Application();
+        app.init({ resizeTo: window,
+          backgroundColor: 0x222222,
+          antialias: true,}).then(async () => {
 
-    const placedTowers = [];
+        // await app.init({ resizeTo: window,
+        //   backgroundColor: 0x222222,
+        //   antialias: true,});
+          
 
-    const waveManager = new WaveManager(app, () => {
-        // You can attach enemy-specific logic or effects here if needed
-      }, (enemy) => {
-        setGold((prev) => prev + (enemy.goldValue || 10));
-      },(enemy) => {
-        setBaseHealth((prev) => Math.max(0, prev - enemy.damageValue)); // onReachedBase
-      });
+        appRef.current = app;
+        console.log(app);
 
-    waveManager.start();
+        // Move the appendChild call *after* the app is created
+        if (pixiContainer.current) {
+          pixiContainer.current.appendChild(app.canvas); // Use app.canvas instead of app.view
+        } else {
+          console.error("PIXI container not found");
+          return; // Important: Exit if container is not found
+        }
+      
 
-    // === Basic Setup ===
-    const stage = app.stage;
+        const placedTowers = [];
+        const projectileContainer = new PIXI.Container();
+        projectileContainer.zIndex = 15;
+        app.stage.addChild(projectileContainer);
 
-    // Grid constants
-    const GRID_SIZE = 64;
-    const GRID_COLS = 10;
-    const GRID_ROWS = 6;
+        const waveManager = new WaveManager(
+          app,
+          () => {},
+          (enemy) => setGold((prev) => prev + (enemy.goldValue || 10)),
+          (enemy) => setBaseHealth((prev) => Math.max(0, prev - enemy.damageValue))
+        );
 
-    // Draw Grid
-    const drawGrid = () => {
-      for (let row = 0; row < GRID_ROWS; row++) {
-        for (let col = 0; col < GRID_COLS; col++) {
-          const gridCell = new PIXI.Graphics();
-          gridCell.beginFill(0xDDDDDD, 1); // Light gray fill, alpha 1 (opaque)
-          gridCell.drawRect(col * GRID_SIZE, row * GRID_SIZE, GRID_SIZE, GRID_SIZE);
-          gridCell.endFill();
-          gridCell.zIndex = 0;
-          gridCell.interactive = true;
-          gridCell.on("pointerdown", (e) => {
-            console.log("Grid cell clicked:", row, col);
-            handlePlacement(e); // Call handlePlacement with the event
+        waveManager.start();
+
+        const stage = app.stage;
+        const GRID_SIZE = 64;
+        const GRID_COLS = 10;
+        const GRID_ROWS = 6;
+
+        const drawGrid = () => {
+          for (let row = 0; row < GRID_ROWS; row++) {
+            for (let col = 0; col < GRID_COLS; col++) {
+              const gridCell = new PIXI.Graphics();
+              gridCell.fill({0xdddddd: 1});
+              gridCell.rect(col * GRID_SIZE, row * GRID_SIZE, GRID_SIZE, GRID_SIZE);
+              gridCell.fill();
+              gridCell.zIndex = 0;
+              gridCell.interactive = true;
+              gridCell.on("pointerdown", (e) => {
+                handlePlacement(e);
+              });
+              stage.addChild(gridCell);
+            }
+          }
+        };
+
+        drawGrid();
+
+        const pathSet = new Set(
+          waypointGridCoords.map(([col, row]) => `${row}-${col}`)
+        );
+
+        const handlePlacement = (e) => {
+          const pos = e.data.global;
+          const row = Math.floor(pos.y / GRID_SIZE);
+          const col = Math.floor(pos.x / GRID_SIZE);
+          const key = `${row}-${col}`;
+
+          const getBlockedTiles = () => {
+            const blockedTiles = [];
+            for (let i = 0; i < waypointGridCoords.length - 1; i++) {
+              const [startX, startY] = waypointGridCoords[i];
+              const [endX, endY] = waypointGridCoords[i + 1];
+
+              if (startX === endX) {
+                const yRange = Array.from(
+                  { length: Math.abs(endY - startY) + 1 },
+                  (_, j) => (startY < endY ? startY + j : startY - j)
+                );
+                yRange.forEach((y) => blockedTiles.push([startX, y]));
+              } else if (startY === endY) {
+                const xRange = Array.from(
+                  { length: Math.abs(endX - startX) + 1 },
+                  (_, j) => (startX < endX ? startX + j : startX - j)
+                );
+                xRange.forEach((x) => blockedTiles.push([x, startY]));
+              }
+            }
+            return blockedTiles;
+          };
+
+          const blockedTiles = getBlockedTiles();
+          const isTileBlocked = (x, y) => blockedTiles.some(([bx, by]) => bx === x && by === y);
+
+          if (isTileBlocked(col, row)) {
+            console.log("Cannot place tower on path tile.");
+            return;
+          }
+
+          const gridX = col * GRID_SIZE + GRID_SIZE / 2;
+          const gridY = row * GRID_SIZE + GRID_SIZE / 2;
+
+          if (placedTowers.some((t) => t.x === gridX && t.y === gridY)) {
+            console.log("Tower already exists at this location.");
+            return;
+          }
+
+          const tower = new Tower(
+            gridX,
+            gridY,
+            projectileContainer,
+            selectedTowerTypeRef.current
+          );
+
+          tower.onSelect = (towerInstance) => {
+            if (
+              selectedTowerRef.current &&
+              selectedTowerRef.current !== towerInstance
+            ) {
+              selectedTowerRef.current.setSelected(false);
+            }
+            selectedTowerRef.current = towerInstance;
+            setSelectedTower(towerInstance);
+          };
+
+          app.stage.addChild(tower);
+          placedTowers.push(tower);
+        };
+
+        app.stage.interactive = true;
+        app.stage.sortableChildren = true;
+
+        app.ticker.add(() => {
+          waveManager.update();
+          placedTowers.forEach((tower) =>
+            tower.update(waveManager.getEnemies())
+          );
+          projectileContainer.children.forEach((proj) => {
+            console.log(projectileContainer.renderable);
+            if (proj.update) proj.update();
           });
-          stage.addChild(gridCell);
-        }
-      }
-    };
+        });
 
-    drawGrid();
-    // graphics.zIndex = 0;
-
-    const pathSet = new Set(
-      waypointGridCoords.map(([col, row]) => `${row}-${col}`)
-    );
-
-    const handlePlacement = (e, towerType) => {
-      console.log("pointerdown");
-      const pos = e.data.global;
-      const row = Math.floor(pos.y / GRID_SIZE);
-      const col = Math.floor(pos.x / GRID_SIZE);
-      const key = `${row}-${col}`;
-
-      const getBlockedTiles = () => {
-        const blockedTiles = [];
-        for (let i = 0; i < waypointGridCoords.length - 1; i++) {
-          const [startX, startY] = waypointGridCoords[i];
-          const [endX, endY] = waypointGridCoords[i + 1];
-
-          // Handle vertical movement
-          if (startX === endX) {
-            const yRange =
-              startY < endY
-                ? [...Array(endY - startY + 1).keys()].map((i) => startY + i)
-                : [...Array(startY - endY + 1).keys()].map((i) => startY - i);
-            yRange.forEach((y) => {
-              if (
-                !blockedTiles.some((tile) => tile[0] === startX && tile[1] === y)
-              ) {
-                blockedTiles.push([startX, y]);
-              }
-            });
-          }
-          // Handle horizontal movement
-          else if (startY === endY) {
-            const xRange =
-              startX < endX
-                ? [...Array(endX - startX + 1).keys()].map((i) => startX + i)
-                : [...Array(startX - endX + 1).keys()].map((i) => startX - i);
-            xRange.forEach((x) => {
-              if (
-                !blockedTiles.some((tile) => tile[0] === x && tile[1] === startY)
-              ) {
-                blockedTiles.push([x, startY]);
-              }
-            });
-          }
-        }
-        return blockedTiles;
-      };
-
-      const blockedTiles = getBlockedTiles();
-      function isTileBlocked(x, y) {
-        return blockedTiles.some((tile) => tile[0] === x && tile[1] === y);
-      }
-
-      console.log("Attempting to place at row-col:", key);
-      console.log("Path set:", pathSet);
-
-      // Check if the tile is blocked by the path
-      if (isTileBlocked(col, row)) {
-        console.log("Cannot place tower on path tile.");
-        return;
-      }
-
-      // Check if the tile is already occupied by a tower
-      const gridX = col * GRID_SIZE + GRID_SIZE / 2;
-      const gridY = row * GRID_SIZE + GRID_SIZE / 2;
-
-      if (placedTowers.some((t) => t.x === gridX && t.y === gridY)) {
-        console.log("Tower already exists at this location.");
-        return;
-      }
-
-      // Create the new tower
-      const tower = new Tower(
-        gridX,
-        gridY,
-        projectileContainer,
-        selectedTowerTypeRef.current
-      );
-
-      tower.onSelect = (towerInstance) => {
-        if (selectedTowerRef.current && selectedTowerRef.current !== towerInstance) {
-            selectedTowerRef.current.setSelected(false);
-          }
-        selectedTowerRef.current = towerInstance; // Update selectedTowerRef
-        setSelectedTower(towerInstance);
-        console.log("Tower selected:", selectedTowerRef.current);
-        console.log("Tower instance selected:", towerInstance);
-      };
-      app.stage.addChild(tower);
-      placedTowers.push(tower);
-    };
-
-    app.stage.interactive = true;
-    app.stage.sortableChildren = true;
-    // app.stage.on("pointerdown", () => {
-    //   selectedTowerRef.current = null; // Clear selection on stage click
-    //   setSelectedTower(null);
-    // });
-
-    // const enemies = [enemy];
-    const projectileContainer = new PIXI.Container();
-    stage.addChild(projectileContainer);
-
-    app.ticker.add(() => {
-      waveManager.update();
-
-      placedTowers.forEach((tower) => tower.update(waveManager.getEnemies()));
-
-      projectileContainer.children.forEach((proj, i) => {
-        if (proj.update) proj.update();
       });
-    });
-
-    // Cleanup on unmount
-    return () => {
-      app.destroy(true, true);
-    };
+      } catch (error) {
+        console.error("PIXI initialization error:", error);
+      }
+    }
   }, []);
 
-  //   return <div ref={pixiContainer} style={{ width: "100vw", height: "100vh" }} />;
+  useEffect(() => {
+    if (pixiContainer.current) {
+      initializePixi();
+    }
+
+    return () => {
+      if (appRef.current) {
+        appRef.current.destroy(true, true);
+      }
+    };
+  }, [pixiContainer, initializePixi]);
+
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
       {/* UI Overlay */}
@@ -207,6 +202,7 @@ export default function TowerDefenseGame() {
               borderRadius: "4px",
               cursor: "pointer",
               fontWeight: "bold",
+              marginRight: "4px",
             }}
           >
             {type.charAt(0).toUpperCase() + type.slice(1)}
@@ -214,18 +210,20 @@ export default function TowerDefenseGame() {
         ))}
       </div>
 
-      {/* Upgrade Button */}
-      <div style={{ position: "absolute", top: 10, left: 10, zIndex: 10, color: "yellow" }}>
+      <div style={{ position: "absolute", top: 40, left: 10, zIndex: 10, color: "red" }}>
+        Base HP: {baseHealth}
+      </div>
+
+      <div style={{ position: "absolute", top: 70, left: 10, zIndex: 10, color: "yellow" }}>
         Gold: {gold}
-        </div>
-      {console.log("selectedTowerRef.current:", selectedTowerRef.current)} 
-      {console.log("selectedTowerRef.current:", selectedTower)} 
+      </div>
+
       {selectedTowerRef.current && (
         <div style={{ position: "absolute", top: 10, right: 10, zIndex: 10 }}>
           <button
             onClick={() => {
               selectedTowerRef.current.upgrade(setGold, gold);
-              selectedTowerRef.current = null; // Clear selection after upgrade
+              selectedTowerRef.current = null;
               setSelectedTower(null);
             }}
             style={{
@@ -242,9 +240,6 @@ export default function TowerDefenseGame() {
           </button>
         </div>
       )}
-      <div style={{ position: "absolute", top: 40, left: 10, zIndex: 10, color: "red" }}>
-            Base HP: {baseHealth}
-      </div>
 
       {/* PIXI Canvas */}
       <div ref={pixiContainer} style={{ width: "100%", height: "100%" }} />
