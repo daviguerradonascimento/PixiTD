@@ -327,9 +327,6 @@ export default function TowerDefenseGame({ gameMode }) {
     }
   }, [gameSpeed]);
 
-  // --- Render ---
-// ...existing code...
-  // --- Render ---
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
       {/* Drag & Drop Tower Palette */}

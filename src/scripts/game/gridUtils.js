@@ -54,9 +54,12 @@ export function getBlockedTiles(waypointGridCoords) {
 
 export function drawIsometricGrid(stage, onClick, waypointGridCoords, cols = GRID_COLS, rows = GRID_ROWS) {
   const totalWidth = (cols + rows) * (TILE_WIDTH / 2);
-  const offsetX = totalWidth / 2; // center grid horizontally
+  const offsetX = totalWidth / 2;
 
   const blockedTiles = getBlockedTiles(waypointGridCoords);
+
+  const startTile = waypointGridCoords[0];
+  const endTile = waypointGridCoords[waypointGridCoords.length - 1];
 
   // Draw all tiles
   for (let row = 0; row < rows; row++) {
@@ -65,8 +68,15 @@ export function drawIsometricGrid(stage, onClick, waypointGridCoords, cols = GRI
       const tile = new PIXI.Graphics();
 
       const isPathTile = blockedTiles.some(([bx, by]) => bx === col && by === row);
+      const isStartTile = startTile && startTile[0] === col && startTile[1] === row;
+      const isEndTile = endTile && endTile[0] === col && endTile[1] === row;
 
-      tile.fill(isPathTile ? 0xe0d3b8 : 0x7fd7c4);
+      // Set tile color using the new palette
+      let tileColor = isPathTile ? 0xe0d3b8 : 0x7fd7c4; // Path: gold, Non-path: teal
+      if (isStartTile) tileColor = 0x5e60ce; // Vivid blue/violet for start
+      if (isEndTile) tileColor = 0xf2545b; // Coral red for end
+
+      tile.beginFill(tileColor);
       tile.moveTo(x + offsetX, y + TILE_HEIGHT / 2);
       tile.lineTo(x + offsetX + TILE_WIDTH / 2, y);
       tile.lineTo(x + offsetX + TILE_WIDTH, y + TILE_HEIGHT / 2);
@@ -111,11 +121,8 @@ export function drawIsometricGrid(stage, onClick, waypointGridCoords, cols = GRI
       stage.addChild(tile);
     }
   }
- 
-  drawGridSides(cols, rows, blockedTiles, offsetX, stage);
-  
-  
 
+  drawGridSides(cols, rows, blockedTiles, offsetX, stage);
 }
 
 export function drawGridSides(cols, rows, blockedTiles, offsetX, stage) {

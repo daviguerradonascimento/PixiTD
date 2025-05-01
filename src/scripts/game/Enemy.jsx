@@ -17,7 +17,7 @@ export const waypointGridCoords = [
   [2, 4],
   [7, 4],
   [7, 1],
-  [10, 1]
+  [9, 1]
 ];
 
 export const waypoints = waypointGridCoords.map(([col, row]) => {
