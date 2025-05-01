@@ -42,9 +42,8 @@ export function getBlockedTiles(waypointGridCoords) {
 export function drawIsometricGrid(stage, onClick, waypointGridCoords, cols = GRID_COLS, rows = GRID_ROWS) {
   const totalWidth = (cols + rows) * (TILE_WIDTH / 2);
   const offsetX = totalWidth / 2; // center grid horizontally
-  console.log(waypointGridCoords);
+
   const blockedTiles = getBlockedTiles(waypointGridCoords); // Path tiles are blocked
-  console.log('blocked',blockedTiles);
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
       const { x, y } = toIsometric(col, row);
