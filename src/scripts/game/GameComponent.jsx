@@ -32,7 +32,6 @@ export default function TowerDefenseGame({ gameMode }) {
   const [currentWave, setCurrentWave] = useState(1);
   const [gameSpeed, setGameSpeed] = useState(1);
   const [gameOver, setGameOver] = useState(false);
-  // const [gameMode, setGameMode] = useState("traditional"); // "traditional" or "infinity"
 
   // Infinity Mode specific states
   const [grid, setGrid] = useState([]);
@@ -42,7 +41,9 @@ export default function TowerDefenseGame({ gameMode }) {
   const gridWaypointsRef = useRef(null);
   const [cols, setCols] = useState(10);
   const [rows, setRows] = useState(6);
-  
+
+  const [placedTowers, setPlacedTowers] = useState([]);
+  const placedTowersRef = useRef(placedTowers);
 
   const [tooltip, setTooltip] = useState({
     visible: false,
@@ -80,6 +81,10 @@ export default function TowerDefenseGame({ gameMode }) {
     waypointsRef.current = waypoints;
   }, [waypoints]);
 
+  useEffect(() => {
+    placedTowersRef.current = placedTowers;
+  }, [placedTowers]);
+
   const initializeGame = useCallback(() => {
     if (!pixiContainerRef.current || appRef.current) return;
 
@@ -107,14 +112,12 @@ export default function TowerDefenseGame({ gameMode }) {
       projectileContainer.zIndex = 15;
       stage.addChild(projectileContainer);
 
-      const placedTowers = [];
-
+      setPlacedTowers([]);
 
       let initialWaypoints = waypointsRef.current;
       let initialGridWaypoints = gridWaypointsRef.current;
 
       if (gameMode === "infinity") {
-
         const levelGenerator = new ProceduralLevelGenerator(cols, rows);
         const newGrid = levelGenerator.generateLevel();
         const newWaypoints = levelGenerator.getWaypoints();
@@ -140,7 +143,7 @@ export default function TowerDefenseGame({ gameMode }) {
       drawIsometricGrid(
         stage,
         (col, row) =>
-          handlePlacement(col, row, stage, placedTowers, projectileContainer),
+          handlePlacement(col, row, stage, projectileContainer),
         initialGridWaypoints,
         cols,
         rows
@@ -184,14 +187,14 @@ export default function TowerDefenseGame({ gameMode }) {
 
       app.ticker.add(() => {
         if (gameStateRef.current === "wave" && waveManagerRef.current) {
-          waveManagerRef.current.update(app.ticker.speed, );
+          waveManagerRef.current.update(app.ticker.speed);
           if (waveManagerRef.current.isWaveComplete()) {
             setGameState("build");
             clearProjectiles();
             setCurrentWave(waveManagerRef.current.currentWave + 1);
           }
         }
-        placedTowers.forEach((tower) =>
+        placedTowersRef.current.forEach((tower) =>
           tower.update(
             waveManagerRef.current?.getEnemies() || [],
             app.ticker.speed
@@ -205,7 +208,7 @@ export default function TowerDefenseGame({ gameMode }) {
     });
   }, [cols, rows, gameMode, initializeGame]);
 
-  const handlePlacement = (col, row, stage, placedTowers, projectileContainer) => {
+  const handlePlacement = (col, row, stage, projectileContainer) => {
     if (gameStateRef.current !== "build") return;
 
     const towerType = selectedTowerTypeRef.current;
@@ -235,7 +238,7 @@ export default function TowerDefenseGame({ gameMode }) {
     const towerX = x + offsetX + gridConsts.TILE_WIDTH / 2;
     const towerY = y + gridConsts.TILE_HEIGHT / 2;
 
-    if (placedTowers.some((t) => t.x === towerX && t.y === towerY)) {
+    if (placedTowersRef.current.some((t) => t.x === towerX && t.y === towerY)) {
       console.log("Tower already exists at this location.");
       return;
     }
@@ -261,8 +264,28 @@ export default function TowerDefenseGame({ gameMode }) {
       setTooltip({ ...tooltip, visible: false });
     };
     stage.addChild(tower);
-    placedTowers.push(tower);
+    setPlacedTowers([...placedTowersRef.current, tower]);
     setGold(goldRef.current - towerBuildCost);
+  };
+
+  const sellTower = () => {
+    if (!selectedTowerRef.current) return;
+
+    const tower = selectedTowerRef.current;
+    const refundPercentage = 0.7; // 70% refund
+
+    const refundAmount = (tower.baseStats.buildCost + ((tower.level - 1) * tower.baseStats.upgradeCost)) * refundPercentage;
+    setGold(goldRef.current + refundAmount);
+
+    // Remove the tower from the stage
+    appRef.current.stage.removeChild(tower);
+
+    // Remove the tower from the placedTowers array
+    setPlacedTowers(placedTowersRef.current.filter((t) => t !== tower));
+
+    // Clear the selected tower
+    setSelectedTower(null);
+    selectedTowerRef.current = null;
   };
 
   useEffect(() => {
@@ -277,7 +300,7 @@ export default function TowerDefenseGame({ gameMode }) {
     if (gameState !== "wave" && waveManagerRef.current) {
       if(gameMode === "infinity") {waveManagerRef.current.spawnRandomWave(currentWave);}
       else	{waveManagerRef.current.start();}
-      
+
       setGameState("wave");
     }
   };
@@ -403,9 +426,25 @@ export default function TowerDefenseGame({ gameMode }) {
               borderRadius: "4px",
               cursor: "pointer",
               fontWeight: "bold",
+              marginRight: "4px",
             }}
           >
             Upgrade
+          </button>
+          <button
+            onClick={sellTower}
+            disabled={gameState === "wave"}
+            style={{
+              padding: "6px 12px",
+              backgroundColor: gameState === "wave" ? "#ccc" : "#FF4136",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontWeight: "bold",
+            }}
+          >
+            Sell
           </button>
         </div>
       )}
