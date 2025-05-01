@@ -87,6 +87,12 @@ export default function TowerDefenseGame({ gameMode }) {
     }
   }, [gameMode]);
 
+  useEffect(() => {
+    if (baseHealth <= 0 && gameState !== "gameover") {
+      setGameState("gameover");
+    }
+  }, [baseHealth, gameState]);
+
   const initializeGame = useCallback(() => {
     if (!pixiContainerRef.current || appRef.current) return;
     const app = new PIXI.Application();
@@ -97,9 +103,6 @@ export default function TowerDefenseGame({ gameMode }) {
     }).then(() => {
       appRef.current = app;
       pixiContainerRef.current.appendChild(app.canvas);
-
-      Assets.load({ alias: "basic", src: basicImage });
-      Assets.load({ alias: "sniper", src: sniperImage });
 
       const stage = app.stage;
       stage.interactive = true;
@@ -177,6 +180,10 @@ export default function TowerDefenseGame({ gameMode }) {
             setGameState("build");
             clearProjectiles();
             setCurrentWave(waveManagerRef.current.currentWave + 1);
+          }
+          if (gameMode !== "infinity" && waveManagerRef.current.currentWave >= waveManagerRef.current.waves.length  && waveManagerRef.current.isWaveComplete()) {
+            setGameState("gameover");
+            app.ticker.stop();
           }
         }
         placedTowersRef.current.forEach((tower) =>
@@ -343,7 +350,7 @@ export default function TowerDefenseGame({ gameMode }) {
             onMouseUp={handleDragEnd}
           />
         ))}
-        <GameControlButton text="Start Wave" onClick={startWave} disabled={gameState === "wave"} />
+        <GameControlButton text="Start Wave" onClick={startWave} disabled={gameState === "wave" || gameState === "gameover"} />
         <GameControlButton
           text={`Speed: ${gameSpeed}x`}
           onClick={() => setGameSpeed(gameSpeed === 1 ? 2 : 1)}
@@ -351,6 +358,26 @@ export default function TowerDefenseGame({ gameMode }) {
         <GameControlButton text={isPaused ? "Resume" : "Pause"} onClick={() =>{togglePause(); isPausedRef.current = !isPausedRef.current}} />
       </div>
 
+        {gameState === "gameover" &&(
+          <div style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            zIndex: 1000,
+            background: "#222",
+            color: "#fff",
+            padding: "2em 3em",
+            borderRadius: "1em",
+            fontSize: "2em",
+            textAlign: "center",
+            boxShadow: "0 0 32px #000a"
+          }}>
+            {baseHealth <= 0
+              ? "Game Over! You lost."
+              : "Congratulations! You won!"}
+          </div>
+        )}
       {/* Ghost Tower Visual Feedback */}
       {draggingTowerType && ghostPos && (
         <img
@@ -385,7 +412,7 @@ export default function TowerDefenseGame({ gameMode }) {
         <TowerActionButtons
           onUpgrade={handleUpgrade}
           onSell={sellTower}
-          disabled={gameState === "wave"}
+          disabled={gameState === "wave" || gameState === "gameover"}
         />
       )}
       {tooltip.visible && <Tooltip x={tooltip.x} y={tooltip.y} stats={tooltip.stats} />}

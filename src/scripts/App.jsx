@@ -1,12 +1,51 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import TowerDefenseGame from "./game/GameComponent";
+import { Assets } from "pixi.js";
+import basicImage from "../sprites/basic.png";
+import sniperImage from "../sprites/sniper.png";
+import rapidImage from "../sprites/fast.png";
+import splashImage from "../sprites/sniper.png";
+import tileImage from "../sprites/tile2.png";
+import tankImage from "../sprites/knight_level_3.png";
+import enemyImage from "../sprites/knight_level_2.png";
+import fastImage from "../sprites/knight_level_1.png";
+
+const assetList = [
+  { alias: "basic", src: basicImage },
+  { alias: "sniper", src: sniperImage },
+  { alias: "rapid", src: rapidImage },
+  { alias: "splash", src: splashImage },
+  { alias: "tile", src: tileImage },
+  { alias: "tank", src: tankImage },
+  { alias: "enemy", src: enemyImage },
+  { alias: "fast_enemy", src: fastImage },
+];
 
 const App = () => {
-  const [gameMode, setGameMode] = useState(null); // null, "traditional", or "infinity"
+  const [gameMode, setGameMode] = useState(null);
+  const [assetsLoaded, setAssetsLoaded] = useState(false);
 
-  const handleModeSelect = (mode) => {
-    setGameMode(mode);
-  };
+  useEffect(() => {
+    // Preload all assets before showing the menu/game
+    Assets.load(assetList).then(() => setAssetsLoaded(true));
+  }, []);
+
+  if (!assetsLoaded) {
+    return (
+      <div style={{
+        color: "#fff",
+        background: "#222",
+        width: "100vw",
+        height: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "2em"
+      }}>
+        Loading assets...
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -31,7 +70,7 @@ const App = () => {
               margin: "10px",
               cursor: "pointer",
             }}
-            onClick={() => handleModeSelect("traditional")}
+            onClick={() => setGameMode("traditional")}
           >
             Traditional Mode
           </button>
@@ -42,13 +81,12 @@ const App = () => {
               margin: "10px",
               cursor: "pointer",
             }}
-            onClick={() => handleModeSelect("infinity")}
+            onClick={() => setGameMode("infinity")}
           >
             Infinity Mode
           </button>
         </div>
       ) : (
-        // Game Component
         <TowerDefenseGame gameMode={gameMode} />
       )}
     </div>

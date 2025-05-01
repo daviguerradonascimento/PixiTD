@@ -28,13 +28,14 @@ export class Tower extends PIXI.Container {
     this.levelText = null;
 
     const towerTexture = PIXI.Texture.from(type);
+    towerTexture.source.scaleMode = 'nearest';
     this.towerSprite = new PIXI.Sprite(towerTexture);
     this.towerSprite.anchor.set(0.5, 0.5);
     const scale = Math.min(TILE_WIDTH / this.towerSprite.width, TILE_HEIGHT / this.towerSprite.height);
     this.towerSprite.scale.set(scale);
     this.addChild(this.towerSprite);
 
-    this.position.set(x, y);  // Set the position of the tow
+    this.position.set(x, y); 
 
     this.drawLevelText();
     this.createRangeCircle();
@@ -55,11 +56,27 @@ export class Tower extends PIXI.Container {
       this.removeChild(this.levelText);
       this.levelText.destroy();
     }
-
-    const style = new PIXI.TextStyle({ fontSize: 12, fill: 0x000000 });
-    const levelText = new PIXI.Text({text:`Lv${this.level}`, style:style});
+  
+    const style = new PIXI.TextStyle({
+      fontFamily: "Segoe UI, Arial, sans-serif",
+      fontSize: 15, 
+      fontWeight: "bold",
+      fill: "#ffe066",
+      stroke: "#222",
+      strokeThickness: 4,
+      dropShadow: true,
+      dropShadowColor: "#000",
+      dropShadowBlur: 4,
+      dropShadowDistance: 2,
+      align: "center",
+    });
+  
+    const levelText = new PIXI.Text(`Lv${this.level}`, style, 3);
     levelText.anchor.set(0.5);
-    levelText.position.set(0, TILE_HEIGHT * 0.1); // Position below the tower
+    levelText.position.set(0, TILE_HEIGHT * 0.1);
+  
+    levelText.scale.set(0.5);
+  
     this.addChild(levelText);
     this.levelText = levelText;
   }

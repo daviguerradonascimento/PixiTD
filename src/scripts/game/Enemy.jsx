@@ -1,6 +1,6 @@
 import * as PIXI from "pixi.js";
 
-import { GRID_COLS, GRID_ROWS, GRID_SIZE, TILE_HEIGHT } from "./gridUtils.js";
+import { GRID_COLS, GRID_ROWS, GRID_SIZE, TILE_HEIGHT, TILE_WIDTH } from "./gridUtils.js";
 
 const offsetX = ((GRID_COLS + GRID_ROWS) * (GRID_SIZE / 2)) / 2;
 
@@ -28,58 +28,65 @@ export const waypoints = waypointGridCoords.map(([col, row]) => {
   };
 });
 
-export class Enemy extends PIXI.Graphics {
+export class Enemy extends PIXI.Container {
   constructor(type = "basic", onDeath = () => {}, onReachedBase = () => {}, waypointsa = waypoints) {
     super();
-    
+
     this.waypoints = waypointsa;
-    console.log("waypoints", this.waypoints);
     this.type = type;
     this.speed = 1;
     this.maxHp = 100;
     this.hp = 100;
-    this.color = 0xff3333;
     this.goldValue = 10;
     this.damageValue = 1;
 
+ 
+    let texture;
+    // Color/tint by type
     if (type === "fast") {
+      texture = PIXI.Texture.from("fast_enemy");
       this.speed = 2;
-      this.color = 0x33ccff;
       this.maxHp = 50;
       this.hp = 50;
       this.goldValue = 5;
       this.damageValue = 0.5;
-
+      // this.sprite.tint = 0x33ccff;
     } else if (type === "tank") {
       this.speed = 0.5;
-      this.color = 0x9966ff;
       this.maxHp = 200;
       this.hp = 200;
       this.goldValue = 15;
       this.damageValue = 2;
-
+      texture = PIXI.Texture.from("tank");
+      // this.sprite.tint = 0x9966ff;
+    } else {
+      texture = PIXI.Texture.from("enemy");
     }
+    texture.baseTexture.scaleMode = 'nearest';
+    this.sprite = new PIXI.Sprite(texture);
+    this.sprite.anchor.set(0.5, 0.7); // Center horizontally, feet at bottom
 
-    
+    const scale = Math.min(TILE_WIDTH / this.sprite.width, TILE_HEIGHT / this.sprite.height);
+    this.sprite.scale.set(scale);
+    this.addChild(this.sprite);
+
     this.waypointIndex = 0;
     this.position.set(this.waypoints[0].x, this.waypoints[0].y);
 
     this.onDeath = typeof onDeath === "function" ? onDeath : () => {};
     this.onReachedBase = typeof onReachedBase === "function" ? onReachedBase : () => {};
 
-    this.body = new PIXI.Graphics();
-    this.body.fill(this.color);
-    this.body.circle(0, 0, (TILE_HEIGHT / 2));
-    this.body.fill();
-    this.addChild(this.body);
-
+    // HP bar
     this.hpBarBackground = new PIXI.Graphics();
     this.addChild(this.hpBarBackground);
     this.hpBarFill = new PIXI.Graphics();
     this.addChild(this.hpBarFill);
 
     this.updateHpBar();
+    this.walkAnimCounter = Math.random() * Math.PI * 2;
   }
+  
+
 
   update(gameSpeed) {
     const target = this.waypoints[this.waypointIndex];
@@ -87,6 +94,10 @@ export class Enemy extends PIXI.Graphics {
     const dy = target.y - this.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
 
+    // --- Walking animation: bob up and down ---
+    this.walkAnimCounter += 0.18 * this.speed * gameSpeed;
+    this.sprite.y = Math.sin(this.walkAnimCounter) * 3;
+    this.sprite.rotation = Math.sin(this.walkAnimCounter) * 0.08;
     if (dist < (this.speed * gameSpeed)) {
       this.x = target.x;
       this.y = target.y;
@@ -131,9 +142,11 @@ export class Enemy extends PIXI.Graphics {
   }
 
   flashHit() {
-    this.body.tint = 0xffffff;
+    this.sprite.tint = 0xffffff;
     setTimeout(() => {
-      this.body.tint = 0xff3333;
+      if (this.type === "fast") this.sprite.tint = 0x33ccff;
+      else if (this.type === "tank") this.sprite.tint = 0x9966ff;
+      else this.sprite.tint = 0xff3333;
     }, 100);
   }
 }
