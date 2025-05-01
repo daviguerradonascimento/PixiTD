@@ -19,19 +19,28 @@ import Tooltip from "./Tooltip.jsx";
 export default function TowerDefenseGame({ gameMode }) {
   const pixiContainerRef = useRef(null);
   const appRef = useRef(null);
+
   const [selectedTowerType, setSelectedTowerType] = useState("basic");
   const selectedTowerTypeRef = useRef("basic");
+
   const [selectedTower, setSelectedTower] = useState(null);
   const selectedTowerRef = useRef(null);
+
   const [baseHealth, setBaseHealth] = useState(10);
+
   const [gold, setGold] = useState(100);
   const goldRef = useRef(gold);
+
   const [gameState, setGameState] = useState("build"); // "build" or "wave"
   const gameStateRef = useRef(null);
+
   const waveManagerRef = useRef(null); // Ref for WaveManager
   const [currentWave, setCurrentWave] = useState(1);
   const [gameSpeed, setGameSpeed] = useState(1);
   const [gameOver, setGameOver] = useState(false);
+
+  const [isPaused, setIsPaused] = useState(false);
+  const isPausedRef = useRef(false);
 
   // Infinity Mode specific states
   const [grid, setGrid] = useState([]);
@@ -186,6 +195,9 @@ export default function TowerDefenseGame({ gameMode }) {
       waveManagerRef.current = waveManager;
 
       app.ticker.add(() => {
+        if (isPausedRef.current) return;
+        console.log("Game is running");
+
         if (gameStateRef.current === "wave" && waveManagerRef.current) {
           waveManagerRef.current.update(app.ticker.speed);
           if (waveManagerRef.current.isWaveComplete()) {
@@ -311,6 +323,10 @@ export default function TowerDefenseGame({ gameMode }) {
     }
   }, [gameSpeed]);
 
+  const togglePause = () => {
+    setIsPaused(!isPaused);
+  };
+
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
       <div style={{ position: "absolute", top: 10, left: 10, zIndex: 10 }}>
@@ -365,6 +381,22 @@ export default function TowerDefenseGame({ gameMode }) {
           }}
         >
           Speed: {gameSpeed}x
+        </button>
+        <button
+          onClick={() =>{togglePause();isPausedRef.current = !isPausedRef.current;}}
+          style={{
+            padding: "6px 12px",
+            backgroundColor: isPaused ? "#4CAF50" : "#ccc",
+            color: "#000",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontWeight: "bold",
+            marginRight: "4px",
+          }}
+        >
+          {isPaused ? "Resume" : "Pause" }
+          {console.log(isPausedRef.current)}
         </button>
       </div>
 
