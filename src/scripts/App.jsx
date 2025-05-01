@@ -4,7 +4,7 @@ import { Assets } from "pixi.js";
 import basicImage from "../sprites/basic.png";
 import sniperImage from "../sprites/sniper.png";
 import rapidImage from "../sprites/fast.png";
-import splashImage from "../sprites/sniper.png";
+import splashImage from "../sprites/splash.png";
 import tileImage from "../sprites/tile2.png";
 import tankImage from "../sprites/knight_level_3.png";
 import enemyImage from "../sprites/knight_level_2.png";

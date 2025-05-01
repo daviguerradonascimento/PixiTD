@@ -16,31 +16,50 @@ const uiButtonStyle = (color, borderColor, disabled, extra = {}) => ({
     ...extra,
   });
   
-  export const TowerTypeButton = ({ type, selectedTowerType, onClick }) => {
-    const isSelected = selectedTowerType === type;
-    const colorMap = {
-      basic: "#66ccff",
-      sniper: "#ffcc00",
-      rapid: "#00ff99",
-      splash: "#ff3333",
-    };
+  export function TowerTypeButton({ type, img, name, price, isSelected, onMouseDown, onMouseUp, disabled }) {
     return (
-      <button
-        onClick={() => onClick(type)}
-        style={uiButtonStyle(
-          isSelected ? "#fff" : colorMap[type] || "#fff",
-          isSelected ? "#fff" : colorMap[type] || "#fff",
-          false,
-          {
-            background: isSelected ? colorMap[type] : "#181c24",
-            marginRight: 8,
-          }
-        )}
-      >
-        {type.charAt(0).toUpperCase() + type.slice(1)}
-      </button>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 64, opacity: disabled ? 0.5 : 1 }}>
+        <img
+          src={img}
+          alt={type}
+          draggable={false}
+          style={{
+            width: 80,
+            height: 80,
+            border: isSelected ? "2px solid #66ccff" : "2px solid #ccc",
+            borderRadius: 8,
+            cursor: "grab",
+            background: "#222",
+          }}
+          onMouseDown={onMouseDown}
+          onMouseUp={onMouseUp}
+        />
+        <div style={{
+          marginTop: 4,
+          fontWeight: "bold",
+          color: "#fff",
+          fontSize: "1em",
+          textShadow: "0 1px 2px #000a",
+          letterSpacing: "0.5px"
+        }}>
+          {name}
+        </div>
+        <div style={{
+          color: "#ffd700",
+          fontWeight: "bold",
+          fontSize: "0.95em",
+          marginTop: 2,
+          background: "#181c24",
+          borderRadius: 6,
+          padding: "2px 8px",
+          border: "1px solid #444",
+          boxShadow: "0 1px 4px #0004"
+        }}>
+          ⛃ {price}
+        </div>
+      </div>
     );
-  };
+  }
   
   export const GameControlButton = ({ text, onClick, disabled }) => (
     <button

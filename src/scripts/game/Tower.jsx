@@ -30,9 +30,10 @@ export class Tower extends PIXI.Container {
     const towerTexture = PIXI.Texture.from(type);
     towerTexture.source.scaleMode = 'nearest';
     this.towerSprite = new PIXI.Sprite(towerTexture);
-    this.towerSprite.anchor.set(0.5, 0.5);
+    this.towerSprite.anchor.set(0.5, 0.7);
     const scale = Math.min(TILE_WIDTH / this.towerSprite.width, TILE_HEIGHT / this.towerSprite.height);
-    this.towerSprite.scale.set(scale);
+    const scaleSize = 1.2;
+    this.towerSprite.scale.set(scale*scaleSize);
     this.addChild(this.towerSprite);
 
     this.position.set(x, y); 

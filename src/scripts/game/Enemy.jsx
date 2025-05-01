@@ -34,7 +34,7 @@ export class Enemy extends PIXI.Container {
 
     this.waypoints = waypointsa;
     this.type = type;
-    this.speed = 1;
+    this.speed = 0.5;
     this.maxHp = 100;
     this.hp = 100;
     this.goldValue = 10;
@@ -45,14 +45,14 @@ export class Enemy extends PIXI.Container {
     // Color/tint by type
     if (type === "fast") {
       texture = PIXI.Texture.from("fast_enemy");
-      this.speed = 2;
+      this.speed = 1;
       this.maxHp = 50;
       this.hp = 50;
       this.goldValue = 5;
       this.damageValue = 0.5;
       // this.sprite.tint = 0x33ccff;
     } else if (type === "tank") {
-      this.speed = 0.5;
+      this.speed = 0.25;
       this.maxHp = 200;
       this.hp = 200;
       this.goldValue = 15;
@@ -64,10 +64,11 @@ export class Enemy extends PIXI.Container {
     }
     texture.baseTexture.scaleMode = 'nearest';
     this.sprite = new PIXI.Sprite(texture);
-    this.sprite.anchor.set(0.5, 0.7); // Center horizontally, feet at bottom
+    this.sprite.anchor.set(0.5, 0.5); // Center horizontally, feet at bottom
 
     const scale = Math.min(TILE_WIDTH / this.sprite.width, TILE_HEIGHT / this.sprite.height);
-    this.sprite.scale.set(scale);
+    const scaleSize = 0.7;
+    this.sprite.scale.set(scale*scaleSize);
     this.addChild(this.sprite);
 
     this.waypointIndex = 0;

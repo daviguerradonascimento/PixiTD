@@ -15,8 +15,8 @@ import {
 
 import basicImage from "../../sprites/basic.png";
 import sniperImage from "../../sprites/sniper.png";
-import rapidImage from "../../sprites/sniper.png";
-import splashImage from "../../sprites/sniper.png";
+import rapidImage from "../../sprites/fast.png";
+import splashImage from "../../sprites/splash.png";
 
 import Tooltip from "./Tooltip.jsx";
 import {
@@ -33,6 +33,13 @@ import {
 const DEFAULT_COLS = 10;
 const DEFAULT_ROWS = 6;
 const REFUND_PERCENTAGE = 0.7;
+
+const towerData = [
+  { type: "basic", img: basicImage, name: "Basic", price: Tower.prototype.baseStats.basic.buildCost },
+  { type: "sniper", img: sniperImage, name: "Sniper", price: Tower.prototype.baseStats.sniper.buildCost },
+  { type: "rapid", img: rapidImage, name: "Rapid", price: Tower.prototype.baseStats.rapid.buildCost },
+  { type: "splash", img: splashImage, name: "Splash", price: Tower.prototype.baseStats.splash.buildCost },
+];
 
 export default function TowerDefenseGame({ gameMode }) {
   // --- States ---
@@ -321,45 +328,39 @@ export default function TowerDefenseGame({ gameMode }) {
   }, [gameSpeed]);
 
   // --- Render ---
+// ...existing code...
+  // --- Render ---
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
       {/* Drag & Drop Tower Palette */}
-      <div style={{ position: "absolute", top: 10, left: 10, zIndex: 20, display: "flex", gap: 8 }}>
-        {[
-          { type: "basic", img: basicImage },
-          { type: "sniper", img: sniperImage },
-          { type: "rapid", img: rapidImage },
-          { type: "splash", img: splashImage },
-          // Add more tower types and images as needed
-        ].map(({ type, img }) => (
-          <img
+      <div style={{ position: "absolute", top: 10, left: 10, zIndex: 20, display: "flex", gap: 8, flexDirection: 'column' }}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <GameControlButton text="Start Wave" onClick={startWave} disabled={gameState === "wave" || gameState === "gameover"} />
+          <GameControlButton
+            text={`Speed: ${gameSpeed}x`}
+            onClick={() => setGameSpeed(gameSpeed === 1 ? 2 : 1)}
+          />
+          <GameControlButton text={isPaused ? "Resume" : "Pause"} onClick={() =>{togglePause(); isPausedRef.current = !isPausedRef.current}} />
+        </div>
+        <div style={{display: "flex",flexDirection: "row", flexWrap: "wrap",gap: "2vw", justifyContent: "center",}}>
+        {towerData.map(({ type, img, name, price }) => (
+          <TowerTypeButton
             key={type}
-            src={img}
-            alt={type}
-            draggable={false}
-            style={{
-              width: 48,
-              height: 48,
-              border: draggingTowerType === type ? "2px solid #66ccff" : "2px solid #ccc",
-              borderRadius: 8,
-              opacity: draggingTowerType && draggingTowerType !== type ? 0.5 : 1,
-              cursor: "grab",
-              background: "#222",
-            }}
+            type={type}
+            img={img}
+            name={name}
+            price={price}
+            isSelected={draggingTowerType === type}
             onMouseDown={() => handleDragStart(type)}
             onMouseUp={handleDragEnd}
+            disabled={gameState === "wave" || gameState === "gameover"}
           />
         ))}
-        <GameControlButton text="Start Wave" onClick={startWave} disabled={gameState === "wave" || gameState === "gameover"} />
-        <GameControlButton
-          text={`Speed: ${gameSpeed}x`}
-          onClick={() => setGameSpeed(gameSpeed === 1 ? 2 : 1)}
-        />
-        <GameControlButton text={isPaused ? "Resume" : "Pause"} onClick={() =>{togglePause(); isPausedRef.current = !isPausedRef.current}} />
-      </div>
-
-        {gameState === "gameover" &&(
-          <div style={{
+        </div>
+        </div>
+      {gameState === "gameover" && (
+        <div
+          style={{
             position: "absolute",
             top: "50%",
             left: "50%",
@@ -371,27 +372,28 @@ export default function TowerDefenseGame({ gameMode }) {
             borderRadius: "1em",
             fontSize: "2em",
             textAlign: "center",
-            boxShadow: "0 0 32px #000a"
-          }}>
-            {baseHealth <= 0
-              ? "Game Over! You lost."
-              : "Congratulations! You won!"}
-          </div>
-        )}
+            boxShadow: "0 0 32px #000a",
+          }}
+        >
+          {baseHealth <= 0
+            ? "Game Over! You lost."
+            : "Congratulations! You won!"}
+        </div>
+      )}
       {/* Ghost Tower Visual Feedback */}
       {draggingTowerType && ghostPos && (
         <img
-        src={
-          draggingTowerType === "basic"
-            ? basicImage
-            : draggingTowerType === "sniper"
-            ? sniperImage
-            : draggingTowerType === "rapid"
-            ? rapidImage
-            : draggingTowerType === "splash"
-            ? splashImage
-            : basicImage
-        }
+          src={
+            draggingTowerType === "basic"
+              ? basicImage
+              : draggingTowerType === "sniper"
+              ? sniperImage
+              : draggingTowerType === "rapid"
+              ? rapidImage
+              : draggingTowerType === "splash"
+              ? splashImage
+              : basicImage
+          }
           alt="ghost"
           style={{
             position: "absolute",
@@ -407,7 +409,22 @@ export default function TowerDefenseGame({ gameMode }) {
         />
       )}
 
-      <GameInfo baseHealth={baseHealth} gold={gold} currentWave={currentWave} />
+      {/* Responsive Game Info */}
+      <div
+        style={{
+          position: "absolute",
+          top: "2vw",
+          right: "2vw",
+          zIndex: 10, // Lower z-index to ensure it doesn't overlap the UI
+          minWidth: "120px",
+          maxWidth: "90vw",
+          width: "clamp(140px, 18vw, 320px)",
+          pointerEvents: "auto",
+        }}
+      >
+        <GameInfo baseHealth={baseHealth} gold={gold} currentWave={currentWave} />
+      </div>
+
       {selectedTower && (
         <TowerActionButtons
           onUpgrade={handleUpgrade}
@@ -415,7 +432,9 @@ export default function TowerDefenseGame({ gameMode }) {
           disabled={gameState === "wave" || gameState === "gameover"}
         />
       )}
-      {tooltip.visible && <Tooltip x={tooltip.x} y={tooltip.y} stats={tooltip.stats} />}
+      {tooltip.visible && (
+        <Tooltip x={tooltip.x} y={tooltip.y} stats={tooltip.stats} />
+      )}
       <div ref={pixiContainerRef} style={{ width: "100%", height: "100%" }} />
     </div>
   );
