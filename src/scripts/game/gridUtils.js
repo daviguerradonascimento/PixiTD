@@ -73,8 +73,21 @@ export function drawIsometricGrid(stage, onClick, waypointGridCoords, cols = GRI
 
       // Set tile color using the new palette
       let tileColor = isPathTile ? 0xe0d3b8 : 0x7fd7c4; // Path: gold, Non-path: teal
-      if (isStartTile) tileColor = 0x5e60ce; // Vivid blue/violet for start
-      if (isEndTile) tileColor = 0xf2545b; // Coral red for end
+      if (isStartTile || isEndTile) {
+        const label = new PIXI.Text(isStartTile ? '⚔️' : '🏰', {
+          fontFamily: 'Arial',
+          fontSize: 100,
+          fill: 0xffffff,
+          fontWeight: 'bold',
+          align: 'center',
+        });
+        label.anchor.set(0.5);
+        label.scale.set(0.2);
+        label.x = x + offsetX + TILE_WIDTH / 2;
+        label.y = y + TILE_HEIGHT / 2;
+        label.zIndex = 2; // Render above the tile
+        stage.addChild(label);
+      }
 
       tile.beginFill(tileColor);
       tile.moveTo(x + offsetX, y + TILE_HEIGHT / 2);

@@ -10,22 +10,28 @@ export class Tower extends PIXI.Container {
     this.level = 1;
     this.isSelected = false;
     this.highlight = new PIXI.Graphics();
+    this.addChild(this.highlight);
 
+    this.range = new PIXI.Graphics();
+    this.addChild(this.range);
 
     this.baseStats = {
       basic:   { damage: 5, color: 0x3399ff, range: 100, cooldown: 60, upgradeCost: 50, buildCost: 50, targetStrategy: "first" },
       sniper:  { damage: 7, color: 0xffcc00, range: 200, cooldown: 120, upgradeCost: 80, buildCost: 75, targetStrategy: "strongest" },
-      rapid:   { damage: 3, color: 0x00ff99, range: 80, cooldown: 20, upgradeCost: 60, buildCost: 60, targetStrategy: "closest" },
+      rapid:   { damage: 3, color: 0xffb300, range: 80, cooldown: 20, upgradeCost: 60, buildCost: 60, targetStrategy: "closest" },
       splash:  { damage: 2, color: 0xff3333, range: 100, cooldown: 80, upgradeCost: 70, buildCost: 70, targetStrategy: "first" },
     }[type];
 
     this.projectileContainer = projectileContainer;
     this.fireTimer = 0;
 
-    
+
     this.interactive = true;
     this.buttonMode = true;
     this.levelText = null;
+
+    this.drawHighlight(); 
+    this.createRangeCircle();
 
     const towerTexture = PIXI.Texture.from(type);
     towerTexture.source.scaleMode = 'nearest';
@@ -39,8 +45,8 @@ export class Tower extends PIXI.Container {
     this.position.set(x, y); 
 
     this.drawLevelText();
-    this.createRangeCircle();
-    this.drawHighlight(); 
+
+    
 
     this.position.set(x, y );
     this.on("pointerdown", () => {
@@ -87,12 +93,11 @@ export class Tower extends PIXI.Container {
     this.cooldown = this.getStat("cooldown");
     this.damage = this.getStat("damage");
 
-    this.range = new PIXI.Graphics();
-    this.range.fill({color:this.baseStats.color, alpha: 0.1});
+    
+    this.range.fill({color:this.baseStats.color, alpha: 0.3});
     this.range.circle(0, 0, this.rangeSize);
     this.range.fill();
     this.range.visible = false;
-    this.addChild(this.range);
   }
 
   drawHighlight() {
@@ -106,12 +111,10 @@ export class Tower extends PIXI.Container {
       this.highlight.lineTo(0, halfH );        
       this.highlight.lineTo(-halfW, 0 );       
       this.highlight.lineTo(0, -halfH );  
-      // this.highlight.rect(0 , 0, 36, 36);
       this.highlight.stroke();
-      // this.highlight.fill();
     }
     this.highlight.visible = this.isSelected;
-    this.addChild(this.highlight);
+
   }
 
   setSelected(isSelected) {
@@ -121,7 +124,6 @@ export class Tower extends PIXI.Container {
   }
 
   getStat(stat) {
-    // Example stat scaling per level
     if (stat === "range") return this.baseStats.range + this.level * 10;
     if (stat === "cooldown") return Math.max(10, this.baseStats.cooldown - this.level * 5);
     if (stat === "damage") return this.baseStats.damage + this.level * 2;
@@ -138,16 +140,14 @@ export class Tower extends PIXI.Container {
       this.damage = this.getStat("damage");
 
       this.range.clear();
-      this.range.fill({color:this.baseStats.color, alpha: 0.1});
+      this.range.fill({color:this.baseStats.color, alpha: 0.3});
       this.range.circle(0, 0, this.rangeSize);
       this.range.fill();
       
-      this.setSelected(!this.isSelected);
       this.drawLevelText(); // Redraw with new level
     } 
     else {
       console.log("Not enough gold to upgrade!");
-      // Optionally, display a message to the player
     }
   }
 
@@ -209,7 +209,6 @@ export class Tower extends PIXI.Container {
         return inRange.reduce((a, b) => (a.hp > b.hp ? a : b));
       case "first":
       default:
-        // Assuming enemies[0] is the first in path; adjust as needed for your enemy logic
         return inRange[0];
     }
   }
@@ -243,6 +242,6 @@ export class Tower extends PIXI.Container {
 Tower.prototype.baseStats = {
   basic:   { damage: 5, color: 0x3399ff, range: 100, cooldown: 60, upgradeCost: 50, buildCost: 50, targetStrategy: "first" },
   sniper:  { damage: 7, color: 0xffcc00, range: 200, cooldown: 120, upgradeCost: 80, buildCost: 75, targetStrategy: "strongest" },
-  rapid:   { damage: 3, color: 0x00ff99, range: 80, cooldown: 20, upgradeCost: 60, buildCost: 60, targetStrategy: "closest" },
+  rapid:   { damage: 3, color: 0xffb300, range: 80, cooldown: 20, upgradeCost: 60, buildCost: 60, targetStrategy: "closest" },
   splash:  { damage: 2, color: 0xff3333, range: 100, cooldown: 80, upgradeCost: 70, buildCost: 70, targetStrategy: "first" },
 };

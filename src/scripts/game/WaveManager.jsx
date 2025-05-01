@@ -107,7 +107,6 @@ export class WaveManager {
   }
 
   spawnEnemy(type, health, speed, goldValue, damageValue) {
-    console.log('aaaaa',this.waypoints)
     const enemy = new Enemy( type, () => {
       this.enemies = this.enemies.filter((e) => e !== enemy);
       this.onEnemyDeath(enemy);
@@ -117,7 +116,7 @@ export class WaveManager {
     enemy.hp = health;
     enemy.goldValue = goldValue;
     enemy.damageValue = damageValue;
-    enemy.zIndex = 3;
+    enemy.zIndex = 4;
     enemy.onDeath = () => {
         this.onEnemyKilled(enemy);
         this.removeEnemy(enemy);

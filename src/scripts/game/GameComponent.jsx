@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import * as PIXI from "pixi.js";
-import { Assets } from "pixi.js";
 import { Enemy, waypoints, waypointGridCoords } from "./Enemy.jsx";
 import { Tower } from "./Tower.jsx";
 import { ProceduralLevelGenerator } from "./ProceduralLevelGenerator.js";
@@ -73,6 +72,132 @@ export default function TowerDefenseGame({ gameMode }) {
   const placedTowersRef = useRef(placedTowers);
   const selectedTowerRef = useRef(selectedTower);
   const selectedTowerTypeRef = useRef(selectedTowerType);
+
+  // Mini path preview size
+  const miniWidth = 180;
+  const miniHeight = 120;
+  const miniPadding = 12;
+
+  // Draw the minimap preview on a canvas
+  const MiniPathPreview = ({ gridWaypoints, cols, rows, visible }) => {
+    const canvasRef = useRef(null);
+
+    useEffect(() => {
+      if (!visible || !canvasRef.current || !gridWaypoints?.length) return;
+      const ctx = canvasRef.current.getContext("2d");
+      ctx.clearRect(0, 0, miniWidth, miniHeight);
+
+      // Draw background
+      ctx.fillStyle = "#232946";
+      ctx.globalAlpha = 0.92;
+      ctx.fillRect(0, 0, miniWidth, miniHeight);
+      ctx.globalAlpha = 1;
+
+      // Draw grid
+      const cellW = (miniWidth - miniPadding * 2) / cols;
+      const cellH = (miniHeight - miniPadding * 2) / rows;
+      ctx.strokeStyle = "#444";
+      ctx.lineWidth = 1;
+      for (let x = 0; x <= cols; x++) {
+        ctx.beginPath();
+        ctx.moveTo(miniPadding + x * cellW, miniPadding);
+        ctx.lineTo(miniPadding + x * cellW, miniHeight - miniPadding);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= rows; y++) {
+        ctx.beginPath();
+        ctx.moveTo(miniPadding, miniPadding + y * cellH);
+        ctx.lineTo(miniWidth - miniPadding, miniPadding + y * cellH);
+        ctx.stroke();
+      }
+
+      // Draw path
+      ctx.strokeStyle = "#66ccff";
+      ctx.lineWidth = 4;
+      ctx.lineJoin = "round";
+      ctx.beginPath();
+      gridWaypoints.forEach(([col, row], idx) => {
+        const cx = miniPadding + (col + 0.5) * cellW;
+        const cy = miniPadding + (row + 0.5) * cellH;
+        if (idx === 0) ctx.moveTo(cx, cy);
+        else ctx.lineTo(cx, cy);
+      });
+      ctx.stroke();
+
+      // Draw start/end
+      if (gridWaypoints.length > 0) {
+        // Start
+        const [startCol, startRow] = gridWaypoints[0];
+        ctx.fillStyle = "#5e60ce";
+        ctx.beginPath();
+        ctx.arc(
+          miniPadding + (startCol + 0.5) * cellW,
+          miniPadding + (startRow + 0.5) * cellH,
+          Math.max(cellW, cellH) * 0.32,
+          0,
+          2 * Math.PI
+        );
+        ctx.fill();
+
+        // End
+        const [endCol, endRow] = gridWaypoints[gridWaypoints.length - 1];
+        ctx.fillStyle = "#f2545b";
+        ctx.beginPath();
+        ctx.arc(
+          miniPadding + (endCol + 0.5) * cellW,
+          miniPadding + (endRow + 0.5) * cellH,
+          Math.max(cellW, cellH) * 0.32,
+          0,
+          2 * Math.PI
+        );
+        ctx.fill();
+      }
+    }, [gridWaypoints, cols, rows, visible]);
+
+    if (!visible) return null;
+    return (
+      <div
+      style={{
+        position: "fixed",
+        bottom: 12,
+        right: 12,
+        zIndex: 50,
+        background: "rgba(30,30,40,0.97)",
+        border: "2px solid #66ccff",
+        borderRadius: 12,
+        boxShadow: "0 4px 16px #000a",
+        padding: 6,
+        pointerEvents: "none",
+        maxWidth: "calc(100vw - 24px)",
+        maxHeight: "calc(100vh - 24px)",
+        boxSizing: "border-box",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+      }}
+    >
+      <canvas
+        ref={canvasRef}
+        width={miniWidth}
+        height={miniHeight}
+        style={{
+          display: "block",
+          borderRadius: 8,
+          maxWidth: "100%",
+          maxHeight: "100%",
+        }}
+      />
+      <div style={{
+        color: "#66ccff",
+        fontWeight: "bold",
+        fontSize: "1em",
+        textAlign: "center",
+        marginTop: 2,
+        letterSpacing: "1px"
+      }}>Path Preview</div>
+    </div>
+    );
+  };
 
   // --- Effects ---
   useEffect(() => { goldRef.current = gold; }, [gold]);
@@ -180,7 +305,7 @@ export default function TowerDefenseGame({ gameMode }) {
       waveManagerRef.current = waveManager;
 
       app.ticker.add(() => {
-        if (isPausedRef.current) return;
+        if (isPausedRef.current ||gameStateRef.current ==="gameover") return;
         if (gameStateRef.current === "wave" && waveManagerRef.current) {
           waveManagerRef.current.update(app.ticker.speed);
           if (waveManagerRef.current.isWaveComplete()) {
@@ -230,7 +355,6 @@ export default function TowerDefenseGame({ gameMode }) {
   const handleUpgrade = () => {
     if (selectedTowerRef.current) {
       selectedTowerRef.current.upgrade(setGold, gold);
-      setSelectedTower(null);
     }
   };
 
@@ -355,7 +479,7 @@ export default function TowerDefenseGame({ gameMode }) {
         ))}
         </div>
         </div>
-      {gameState === "gameover" && (
+        {gameState === "gameover" && (
         <div
           style={{
             position: "absolute",
@@ -363,18 +487,29 @@ export default function TowerDefenseGame({ gameMode }) {
             left: "50%",
             transform: "translate(-50%, -50%)",
             zIndex: 1000,
-            background: "#222",
+            background: "rgba(30, 30, 40, 0.97)",
             color: "#fff",
-            padding: "2em 3em",
-            borderRadius: "1em",
-            fontSize: "2em",
+            padding: "2.5em 4em",
+            borderRadius: "18px",
+            fontSize: "2.2em",
             textAlign: "center",
-            boxShadow: "0 0 32px #000a",
+            boxShadow: "0 4px 32px #000a",
+            border: "3px solid #66ccff",
+            fontFamily: "Segoe UI, Arial, sans-serif",
+            letterSpacing: "1px",
+            minWidth: 340,
+            maxWidth: "90vw",
+            userSelect: "none",
           }}
         >
-          {baseHealth <= 0
-            ? "Game Over! You lost."
-            : "Congratulations! You won!"}
+          <div style={{ fontWeight: "bold", color: baseHealth <= 0 ? "#ff4d4f" : "#66ff99", marginBottom: 16 }}>
+            {baseHealth <= 0 ? "Game Over" : "Victory!"}
+          </div>
+          <div style={{ fontSize: "1.1em", color: "#ffe066" }}>
+            {baseHealth <= 0
+              ? "You lost. Try again!"
+              : "Congratulations! You won!"}
+          </div>
         </div>
       )}
       {/* Ghost Tower Visual Feedback */}
@@ -420,6 +555,13 @@ export default function TowerDefenseGame({ gameMode }) {
         }}
       >
         <GameInfo baseHealth={baseHealth} gold={gold} currentWave={currentWave} />
+
+        <MiniPathPreview
+        gridWaypoints={gridWaypoints}
+        cols={cols}
+        rows={rows}
+        visible={gameState === "build"}
+      />
       </div>
 
       {selectedTower && (
@@ -432,6 +574,7 @@ export default function TowerDefenseGame({ gameMode }) {
       {tooltip.visible && (
         <Tooltip x={tooltip.x} y={tooltip.y} stats={tooltip.stats} />
       )}
+
       <div ref={pixiContainerRef} style={{ width: "100%", height: "100%" }} />
     </div>
   );

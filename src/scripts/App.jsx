@@ -58,33 +58,75 @@ const App = () => {
             alignItems: "center",
             justifyContent: "center",
             height: "100vh",
-            backgroundColor: "#333",
-            color: "white",
+            background: "linear-gradient(135deg, #232946 0%, #181c24 100%)",
           }}
         >
-          <h1>Pixi TD</h1>
-          <button
+          <div
             style={{
-              padding: "10px 20px",
-              fontSize: "1.2em",
-              margin: "10px",
-              cursor: "pointer",
+              background: "rgba(30, 30, 40, 0.97)",
+              borderRadius: "18px",
+              border: "3px solid #66ccff",
+              boxShadow: "0 4px 32px #000a",
+              padding: "3em 4em 2.5em 4em",
+              minWidth: 340,
+              maxWidth: "90vw",
+              textAlign: "center",
+              fontFamily: "Segoe UI, Arial, sans-serif",
+              color: "#fff",
+              letterSpacing: "1px",
+              userSelect: "none",
             }}
-            onClick={() => setGameMode("traditional")}
           >
-            Traditional Mode
-          </button>
-          <button
-            style={{
-              padding: "10px 20px",
-              fontSize: "1.2em",
-              margin: "10px",
-              cursor: "pointer",
-            }}
-            onClick={() => setGameMode("infinity")}
-          >
-            Infinity Mode
-          </button>
+            <h1 style={{
+              color: "#66ccff",
+              fontWeight: "bold",
+              fontSize: "2.8em",
+              marginBottom: 24,
+              letterSpacing: "2px",
+              textShadow: "0 2px 8px #000a"
+            }}>
+              Pixi TD
+            </h1>
+            <button
+              style={{
+                padding: "14px 36px",
+                fontSize: "1.25em",
+                margin: "12px 0",
+                cursor: "pointer",
+                borderRadius: "8px",
+                border: "2px solid #66ccff",
+                background: "#181c24",
+                color: "#fff",
+                fontWeight: "bold",
+                boxShadow: "0 2px 8px #0004",
+                transition: "background 0.2s, color 0.2s, border 0.2s",
+                letterSpacing: "1px",
+              }}
+              onClick={() => setGameMode("traditional")}
+            >
+              Traditional Mode
+            </button>
+            <br />
+            <button
+              style={{
+                padding: "14px 36px",
+                fontSize: "1.25em",
+                margin: "12px 0",
+                cursor: "pointer",
+                borderRadius: "8px",
+                border: "2px solid #66ccff",
+                background: "#181c24",
+                color: "#fff",
+                fontWeight: "bold",
+                boxShadow: "0 2px 8px #0004",
+                transition: "background 0.2s, color 0.2s, border 0.2s",
+                letterSpacing: "1px",
+              }}
+              onClick={() => setGameMode("infinity")}
+            >
+              Infinity Mode
+            </button>
+          </div>
         </div>
       ) : (
         <TowerDefenseGame gameMode={gameMode} />

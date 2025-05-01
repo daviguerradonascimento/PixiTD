@@ -50,7 +50,6 @@ export class Enemy extends PIXI.Container {
       this.hp = 50;
       this.goldValue = 5;
       this.damageValue = 0.5;
-      // this.sprite.tint = 0x33ccff;
     } else if (type === "tank") {
       this.speed = 0.25;
       this.maxHp = 200;
@@ -58,13 +57,12 @@ export class Enemy extends PIXI.Container {
       this.goldValue = 15;
       this.damageValue = 2;
       texture = PIXI.Texture.from("tank");
-      // this.sprite.tint = 0x9966ff;
     } else {
       texture = PIXI.Texture.from("enemy");
     }
     texture.baseTexture.scaleMode = 'nearest';
     this.sprite = new PIXI.Sprite(texture);
-    this.sprite.anchor.set(0.5, 0.5); // Center horizontally, feet at bottom
+    this.sprite.anchor.set(0.5, 0.5);
 
     const scale = Math.min(TILE_WIDTH / this.sprite.width, TILE_HEIGHT / this.sprite.height);
     const scaleSize = 0.7;
@@ -105,7 +103,7 @@ export class Enemy extends PIXI.Container {
       this.waypointIndex++;
       if (this.waypointIndex >= this.waypoints.length) {
         this.onReachedBase?.(this);
-        this.destroy(); // Reached base
+        this.destroy();
         return;
       }
     } else {
@@ -121,6 +119,9 @@ export class Enemy extends PIXI.Container {
     this.flashHit();
     this.updateHpBar();
     if (this.hp <= 0) {
+      if (this.parent) {
+        this.spawnDeathParticles(this.parent, this.x, this.y, this.type === "tank" ? 0x9966ff : this.type === "fast" ? 0x33ccff : 0xff3333);
+      }
       this.onDeath();
       this.destroy();
     }
@@ -143,11 +144,51 @@ export class Enemy extends PIXI.Container {
   }
 
   flashHit() {
-    this.sprite.tint = 0xffffff;
+
+    this.sprite.tint = 0xffffff; 
     setTimeout(() => {
-      if (this.type === "fast") this.sprite.tint = 0x33ccff;
-      else if (this.type === "tank") this.sprite.tint = 0x9966ff;
-      else this.sprite.tint = 0xff3333;
-    }, 100);
+      if (this.sprite && !this.sprite.destroyed) {
+        let typeTint = 0xff3333; // Red for basic
+        if (this.type === "fast") typeTint = 0x33ccff; // Blue for fast
+        else if (this.type === "tank") typeTint = 0x9966ff; // Purple for tank
+  
+        this.sprite.tint = typeTint; 
+        setTimeout(() => {
+          if (this.sprite && !this.sprite.destroyed) {
+            this.sprite.tint = 0xffffff;
+          }
+        }, 150); 
+      }
+    }, 100); 
+  }
+
+  spawnDeathParticles(stage, x, y, color = 0xff3333, count = 12) {
+    for (let i = 0; i < count; i++) {
+      const particle = new PIXI.Graphics();
+      particle.beginFill(color);
+      particle.drawCircle(0, 0, Math.random() * 2 + 2);
+      particle.endFill();
+      particle.x = x;
+      particle.y = y;
+      particle.alpha = 1;
+  
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 2 + 1;
+      particle.vx = Math.cos(angle) * speed;
+      particle.vy = Math.sin(angle) * speed;
+  
+      particle.update = function () {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += 0.1; 
+        this.alpha -= 0.03;
+        if (this.alpha <= 0) {
+          this.parent && this.parent.removeChild(this);
+        }
+      };
+  
+      stage.addChild(particle);
+      PIXI.Ticker.shared.add(particle.update, particle);
+    }
   }
 }

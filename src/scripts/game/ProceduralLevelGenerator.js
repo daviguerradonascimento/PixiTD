@@ -78,7 +78,33 @@ export class ProceduralLevelGenerator {
       endY = Math.floor(Math.random() * this.rows);
     }
 
-    const path = this.getPath(startX, startY, endX, endY);
+    // --- NEW: Generate random intermediate waypoints ---
+    const numWaypoints = Math.floor(Math.random() * 2) + 2; // 2 or 3 waypoints
+    const waypoints = [];
+    for (let i = 0; i < numWaypoints; i++) {
+      let wx, wy;
+      let tries = 0;
+      do {
+        wx = Math.floor(Math.random() * this.cols);
+        wy = Math.floor(Math.random() * this.rows);
+        tries++;
+        // Avoid start/end and duplicate waypoints
+      } while (
+        ((wx === startX && wy === startY) || (wx === endX && wy === endY) ||
+        waypoints.some(([x, y]) => x === wx && y === wy)) && tries < 10
+      );
+      waypoints.push([wx, wy]);
+    }
+
+    // Build the full path: start → waypoints... → end
+    const points = [[startX, startY], ...waypoints, [endX, endY]];
+    let path = [];
+    for (let i = 0; i < points.length - 1; i++) {
+      const segment = this.getPath(points[i][0], points[i][1], points[i + 1][0], points[i + 1][1]);
+      // Avoid duplicating the connecting point
+      if (i > 0 && segment.length > 0) segment.shift();
+      path = path.concat(segment);
+    }
 
     // Mark path tiles on the grid
     path.forEach(([x, y]) => {
