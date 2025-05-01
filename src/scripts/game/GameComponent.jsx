@@ -58,6 +58,7 @@ export default function TowerDefenseGame({ gameMode }) {
   const waypointsRef = useRef(waypoints);
   const placedTowersRef = useRef(placedTowers);
   const selectedTowerRef = useRef(selectedTower);
+  const selectedTowerTypeRef = useRef(selectedTowerType);
 
   // --- Effects ---
   useEffect(() => { goldRef.current = gold; }, [gold]);
@@ -66,6 +67,7 @@ export default function TowerDefenseGame({ gameMode }) {
   useEffect(() => { waypointsRef.current = waypoints; }, [waypoints]);
   useEffect(() => { placedTowersRef.current = placedTowers; }, [placedTowers]);
   useEffect(() => { selectedTowerRef.current = selectedTower; }, [selectedTower]);
+  useEffect(() => { selectedTowerTypeRef.current = selectedTowerType; }, [selectedTowerType]);
 
   useEffect(() => {
     if (!gameMode) return;
@@ -134,7 +136,7 @@ export default function TowerDefenseGame({ gameMode }) {
             stage,
             projectileContainer,
             gameStateRef,
-            selectedTowerType,
+            selectedTowerTypeRef,
             goldRef,
             gridWaypointsRef,
             placedTowersRef,
@@ -179,7 +181,6 @@ export default function TowerDefenseGame({ gameMode }) {
 
       app.ticker.add(() => {
         if (isPausedRef.current) return;
-        console.log("Game tick", gameStateRef.current);
         if (gameStateRef.current === "wave" && waveManagerRef.current) {
           waveManagerRef.current.update(app.ticker.speed);
           if (waveManagerRef.current.isWaveComplete()) {
@@ -195,7 +196,7 @@ export default function TowerDefenseGame({ gameMode }) {
         stage.children.sort((a, b) => a.y - b.y);
       });
     });
-  }, [cols, rows, gameMode, selectedTowerType]);
+  }, [cols, rows, gameMode]);
 
   const sellTower = () =>
     sellTowerLogic({

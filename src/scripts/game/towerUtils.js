@@ -7,7 +7,7 @@ export function handlePlacement({
   stage,
   projectileContainer,
   gameStateRef,
-  selectedTowerType,
+  selectedTowerTypeRef,
   goldRef,
   gridWaypointsRef,
   placedTowersRef,
@@ -20,7 +20,7 @@ export function handlePlacement({
 }) {
   if (gameStateRef.current !== "build") return;
 
-  const towerBuildCost = Tower.prototype.baseStats[selectedTowerType].buildCost;
+  const towerBuildCost = Tower.prototype.baseStats[selectedTowerTypeRef.current].buildCost;
   if (goldRef.current < towerBuildCost) {
     console.log("Not enough gold to place tower.");
     return;
@@ -42,7 +42,7 @@ export function handlePlacement({
   const towerX = x + offsetX + gridConsts.TILE_WIDTH / 2;
   const towerY = y + gridConsts.TILE_HEIGHT / 2;
 
-  const tower = new Tower(towerX, towerY, projectileContainer, selectedTowerType);
+  const tower = new Tower(towerX, towerY, projectileContainer, selectedTowerTypeRef.current);
   tower.zIndex = 2;
   tower.onSelect = (towerInstance) => setSelectedTower(towerInstance);
   tower.onHover = (stats, x, y) => setTooltip({ visible: true, x, y, stats });
