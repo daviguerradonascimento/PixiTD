@@ -39,6 +39,10 @@ const Tooltip = ({ x, y, stats }) => {
         <span style={{ fontWeight: "bold" }}>{stats.cooldown}</span>
       </div>
       <div>
+        <span style={{ color: "#ff4d4f" }}>Damage:</span>{" "}
+        <span style={{ fontWeight: "bold" }}>{stats.damage}</span>
+      </div>
+      <div>
         <span style={{ color: "#ff4d4f" }}>Upgrade Cost:</span>{" "}
         <span style={{ fontWeight: "bold" }}>{stats.upgradeCost}</span>
       </div>

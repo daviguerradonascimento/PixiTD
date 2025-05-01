@@ -1,5 +1,5 @@
 import * as PIXI from "pixi.js";
-import { Projectile } from "./Projectile.jsx";
+import { Projectile, BasicProjectile, SplashProjectile, RapidProjectile, SniperProjectile } from "./Projectile.jsx";
 import { TILE_WIDTH, TILE_HEIGHT } from "./gridUtils.js";
 
 export class Tower extends PIXI.Container {
@@ -13,10 +13,10 @@ export class Tower extends PIXI.Container {
 
 
     this.baseStats = {
-      basic:   { texture: "assets/asteroid.png", color: 0x3399ff, range: 100, cooldown: 60, upgradeCost: 50, buildCost: 50, targetStrategy: "first" },
-      sniper:  { texture: "basicTower.png", color: 0xffcc00, range: 200, cooldown: 120, upgradeCost: 80, buildCost: 75, targetStrategy: "strongest" },
-      rapid:   { texture: "basicTower.png", color: 0x00ff99, range: 80, cooldown: 20, upgradeCost: 60, buildCost: 60, targetStrategy: "closest" },
-      splash:  { texture: "basicTower.png", color: 0xff3333, range: 100, cooldown: 80, upgradeCost: 70, buildCost: 70, targetStrategy: "first" },
+      basic:   { damage: 5, color: 0x3399ff, range: 100, cooldown: 60, upgradeCost: 50, buildCost: 50, targetStrategy: "first" },
+      sniper:  { damage: 7, color: 0xffcc00, range: 200, cooldown: 120, upgradeCost: 80, buildCost: 75, targetStrategy: "strongest" },
+      rapid:   { damage: 3, color: 0x00ff99, range: 80, cooldown: 20, upgradeCost: 60, buildCost: 60, targetStrategy: "closest" },
+      splash:  { damage: 2, color: 0xff3333, range: 100, cooldown: 80, upgradeCost: 70, buildCost: 70, targetStrategy: "first" },
     }[type];
 
     this.projectileContainer = projectileContainer;
@@ -85,6 +85,7 @@ export class Tower extends PIXI.Container {
   createRangeCircle() {
     this.rangeSize = this.getStat("range");
     this.cooldown = this.getStat("cooldown");
+    this.damage = this.getStat("damage");
 
     this.range = new PIXI.Graphics();
     this.range.fill({color:this.baseStats.color, alpha: 0.1});
@@ -123,6 +124,7 @@ export class Tower extends PIXI.Container {
     // Example stat scaling per level
     if (stat === "range") return this.baseStats.range + this.level * 10;
     if (stat === "cooldown") return Math.max(10, this.baseStats.cooldown - this.level * 5);
+    if (stat === "damage") return this.baseStats.damage + this.level * 2;
     return 0;
   }
 
@@ -133,6 +135,7 @@ export class Tower extends PIXI.Container {
       this.level++;
       this.rangeSize = this.getStat("range");
       this.cooldown = this.getStat("cooldown");
+      this.damage = this.getStat("damage");
 
       this.range.clear();
       this.range.fill({color:this.baseStats.color, alpha: 0.1});
@@ -165,12 +168,26 @@ export class Tower extends PIXI.Container {
     if (this.type === "splash") {
       for (const other of enemies) {
         if (!other || other.destroyed) continue;
-          const projectile = new Projectile(this.x, this.y, other);
+          const projectile = new SplashProjectile(this.x, this.y, other, this.baseStats.damage);
           this.projectileContainer.addChild(projectile);
       }
     } else {
-      const projectile = new Projectile(this.x, this.y, enemy);
-      this.projectileContainer.addChild(projectile);
+      switch (this.type) {
+        case "sniper":
+          const sniper = new SniperProjectile(this.x, this.y, enemy, this.baseStats.damage);
+          this.projectileContainer.addChild(sniper);
+          break;
+        case "rapid":
+          const rapid = new RapidProjectile(this.x, this.y, enemy, this.baseStats.damage);
+          this.projectileContainer.addChild(rapid);
+          break;
+        case "basic":
+        default:
+          const basic = new BasicProjectile(this.x, this.y, enemy, this.baseStats.damage);
+          this.projectileContainer.addChild(basic);
+          break;
+      }
+      
     }
   }
 
@@ -217,14 +234,15 @@ export class Tower extends PIXI.Container {
       level: this.level,
       range: this.rangeSize,
       cooldown: this.cooldown,
+      damage: this.getStat("damage"),
       upgradeCost: this.baseStats.upgradeCost,
     };
   }
 }
 
 Tower.prototype.baseStats = {
-  basic:   { texture: "assets/asteroid.png", color: 0x3399ff, range: 100, cooldown: 60, upgradeCost: 50, buildCost: 50, targetStrategy: "first" },
-  sniper:  { texture: "basicTower.png", color: 0xffcc00, range: 200, cooldown: 120, upgradeCost: 80, buildCost: 75, targetStrategy: "strongest" },
-  rapid:   { texture: "basicTower.png", color: 0x00ff99, range: 80, cooldown: 20, upgradeCost: 60, buildCost: 60, targetStrategy: "closest" },
-  splash:  { texture: "basicTower.png", color: 0xff3333, range: 100, cooldown: 80, upgradeCost: 70, buildCost: 70, targetStrategy: "first" },
+  basic:   { damage: 5, color: 0x3399ff, range: 100, cooldown: 60, upgradeCost: 50, buildCost: 50, targetStrategy: "first" },
+  sniper:  { damage: 7, color: 0xffcc00, range: 200, cooldown: 120, upgradeCost: 80, buildCost: 75, targetStrategy: "strongest" },
+  rapid:   { damage: 3, color: 0x00ff99, range: 80, cooldown: 20, upgradeCost: 60, buildCost: 60, targetStrategy: "closest" },
+  splash:  { damage: 2, color: 0xff3333, range: 100, cooldown: 80, upgradeCost: 70, buildCost: 70, targetStrategy: "first" },
 };
