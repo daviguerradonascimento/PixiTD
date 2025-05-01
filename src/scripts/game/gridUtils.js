@@ -11,9 +11,22 @@ export function toIsometric(col, row) {
   return { x, y };
 }
 
-export function screenToGrid(x, y) {
-  const col = Math.floor((x / (TILE_WIDTH / 2) + y / (TILE_HEIGHT / 2)) / 2);
-  const row = Math.floor((y / (TILE_HEIGHT / 2) - x / (TILE_WIDTH / 2)) / 2);
+export function screenToGrid(x, y, cols = GRID_COLS, rows = GRID_ROWS) {
+  // Offset to match drawIsometricGrid
+  const totalWidth = (cols + rows) * (TILE_WIDTH / 2);
+  const offsetX = totalWidth / 2;
+
+  // Convert screen/stage coordinates to local isometric grid coordinates
+  const localX = x - offsetX;
+  const localY = y;
+
+  // Inverse isometric transform
+  let col = Math.round((localX / (TILE_WIDTH / 2) + localY / (TILE_HEIGHT / 2)) / 2);
+  const row = Math.round((localY / (TILE_HEIGHT / 2) - localX / (TILE_WIDTH / 2)) / 2);
+
+  // Adjust col by subtracting 1
+  col = col - 1;
+
   return { col, row };
 }
 

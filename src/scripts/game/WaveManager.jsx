@@ -10,7 +10,6 @@ export class WaveManager {
     this.activeEnemies = [];
     this.isSpawning = false;
     this.waypoints = waypoints || [];
-    console.log("waypoints here", this.waypoints);
     
     this.waves = [
       { enemies: ["basic", "basic", "basic"], interval: 1000 },
@@ -118,6 +117,7 @@ export class WaveManager {
     enemy.hp = health;
     enemy.goldValue = goldValue;
     enemy.damageValue = damageValue;
+    enemy.zIndex = 3;
     enemy.onDeath = () => {
         this.onEnemyKilled(enemy);
         this.removeEnemy(enemy);

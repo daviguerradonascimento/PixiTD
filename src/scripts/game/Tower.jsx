@@ -13,10 +13,10 @@ export class Tower extends PIXI.Container {
 
 
     this.baseStats = {
-      basic: { texture: "assets/asteroid.png",color: 0x3399ff, range: 100, cooldown: 60, upgradeCost: 50, buildCost: 50 },
-      sniper: { texture: "basicTower.png",color: 0xffcc00, range: 200, cooldown: 120, upgradeCost: 80, buildCost: 75 },
-      rapid: { texture: "basicTower.png",color: 0x00ff99, range: 80, cooldown: 20, upgradeCost: 60, buildCost: 60 },
-      splash: { texture: "basicTower.png",color: 0xff3333, range: 100, cooldown: 80, upgradeCost: 70, buildCost: 70 },
+      basic:   { texture: "assets/asteroid.png", color: 0x3399ff, range: 100, cooldown: 60, upgradeCost: 50, buildCost: 50, targetStrategy: "first" },
+      sniper:  { texture: "basicTower.png", color: 0xffcc00, range: 200, cooldown: 120, upgradeCost: 80, buildCost: 75, targetStrategy: "strongest" },
+      rapid:   { texture: "basicTower.png", color: 0x00ff99, range: 80, cooldown: 20, upgradeCost: 60, buildCost: 60, targetStrategy: "closest" },
+      splash:  { texture: "basicTower.png", color: 0xff3333, range: 100, cooldown: 80, upgradeCost: 70, buildCost: 70, targetStrategy: "first" },
     }[type];
 
     this.projectileContainer = projectileContainer;
@@ -131,39 +131,51 @@ export class Tower extends PIXI.Container {
   }
 
   update(enemies, gameSpeed) {
-    if ((this.fireTimer/gameSpeed) > 0) {
+    if ((this.fireTimer / gameSpeed) > 0) {
       this.fireTimer--;
       return;
     }
-
-    for (const enemy of enemies) {
-      if (!enemy || enemy.destroyed) continue;
-      const dx = enemy.x - this.x;
-      const dy = enemy.y - this.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-
-      if (dist <= this.rangeSize) {
-        this.attack(enemy);
-        this.fireTimer = this.cooldown;
-        break;
-      }
+  
+    const target = this.getTarget(enemies);
+    if (target) {
+      this.attack(target, enemies);
+      this.fireTimer = this.cooldown;
     }
   }
 
-  attack(enemy) {
+  attack(enemy, enemies) {
     if (this.type === "splash") {
-      for (const other of enemy._enemyList || []) {
+      for (const other of enemies) {
         if (!other || other.destroyed) continue;
-        const dx = other.x - enemy.x;
-        const dy = other.y - enemy.y;
-        if (Math.sqrt(dx * dx + dy * dy) < 40) {
           const projectile = new Projectile(this.x, this.y, other);
           this.projectileContainer.addChild(projectile);
-        }
       }
     } else {
       const projectile = new Projectile(this.x, this.y, enemy);
       this.projectileContainer.addChild(projectile);
+    }
+  }
+
+  getTarget(enemies) {
+    const inRange = enemies.filter(
+      (enemy) =>
+        enemy &&
+        !enemy.destroyed &&
+        Math.sqrt((enemy.x - this.x) ** 2 + (enemy.y - this.y) ** 2) <= this.rangeSize
+    );
+    if (inRange.length === 0) return null;
+  
+    switch (this.baseStats.targetStrategy) {
+      case "closest":
+        return inRange.reduce((a, b) =>
+          Math.hypot(a.x - this.x, a.y - this.y) < Math.hypot(b.x - this.x, b.y - this.y) ? a : b
+        );
+      case "strongest":
+        return inRange.reduce((a, b) => (a.hp > b.hp ? a : b));
+      case "first":
+      default:
+        // Assuming enemies[0] is the first in path; adjust as needed for your enemy logic
+        return inRange[0];
     }
   }
 
@@ -193,8 +205,8 @@ export class Tower extends PIXI.Container {
 }
 
 Tower.prototype.baseStats = {
-  basic: { texture: "assets/asteroid.png",color: 0x3399ff, range: 100, cooldown: 60, upgradeCost: 50, buildCost: 50 },
-  sniper: { texture: "basicTower.png",color: 0xffcc00, range: 200, cooldown: 120, upgradeCost: 80, buildCost: 75 },
-  rapid: { texture: "basicTower.png",color: 0x00ff99, range: 80, cooldown: 20, upgradeCost: 60, buildCost: 60 },
-  splash: { texture: "basicTower.png",color: 0xff3333, range: 100, cooldown: 80, upgradeCost: 70, buildCost: 70 },
+  basic:   { texture: "assets/asteroid.png", color: 0x3399ff, range: 100, cooldown: 60, upgradeCost: 50, buildCost: 50, targetStrategy: "first" },
+  sniper:  { texture: "basicTower.png", color: 0xffcc00, range: 200, cooldown: 120, upgradeCost: 80, buildCost: 75, targetStrategy: "strongest" },
+  rapid:   { texture: "basicTower.png", color: 0x00ff99, range: 80, cooldown: 20, upgradeCost: 60, buildCost: 60, targetStrategy: "closest" },
+  splash:  { texture: "basicTower.png", color: 0xff3333, range: 100, cooldown: 80, upgradeCost: 70, buildCost: 70, targetStrategy: "first" },
 };

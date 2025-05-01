@@ -10,9 +10,14 @@ import {
   getBlockedTiles,
   drawIsometricGrid,
   gridConsts,
+  screenToGrid,
 } from "./gridUtils";
-import asteroidImage from "../../sprites/basic.png";
+
+import basicImage from "../../sprites/basic.png";
 import sniperImage from "../../sprites/sniper.png";
+import rapidImage from "../../sprites/sniper.png";
+import splashImage from "../../sprites/sniper.png";
+
 import Tooltip from "./Tooltip.jsx";
 import {
   TowerTypeButton,
@@ -34,7 +39,7 @@ export default function TowerDefenseGame({ gameMode }) {
   const [selectedTowerType, setSelectedTowerType] = useState("basic");
   const [selectedTower, setSelectedTower] = useState(null);
   const [baseHealth, setBaseHealth] = useState(10);
-  const [gold, setGold] = useState(100);
+  const [gold, setGold] = useState(10000);
   const [gameState, setGameState] = useState("build");
   const [currentWave, setCurrentWave] = useState(1);
   const [gameSpeed, setGameSpeed] = useState(1);
@@ -47,6 +52,8 @@ export default function TowerDefenseGame({ gameMode }) {
   const [rows, setRows] = useState(DEFAULT_ROWS);
   const [placedTowers, setPlacedTowers] = useState([]);
   const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, stats: {} });
+  const [draggingTowerType, setDraggingTowerType] = useState(null);
+  const [ghostPos, setGhostPos] = useState(null);
 
   // --- Refs ---
   const pixiContainerRef = useRef(null);
@@ -67,7 +74,7 @@ export default function TowerDefenseGame({ gameMode }) {
   useEffect(() => { waypointsRef.current = waypoints; }, [waypoints]);
   useEffect(() => { placedTowersRef.current = placedTowers; }, [placedTowers]);
   useEffect(() => { selectedTowerRef.current = selectedTower; }, [selectedTower]);
-  useEffect(() => { selectedTowerTypeRef.current = selectedTowerType; }, [selectedTowerType]);
+  useEffect(() => { selectedTowerTypeRef.current = draggingTowerType; }, [draggingTowerType]);
 
   useEffect(() => {
     if (!gameMode) return;
@@ -91,7 +98,7 @@ export default function TowerDefenseGame({ gameMode }) {
       appRef.current = app;
       pixiContainerRef.current.appendChild(app.canvas);
 
-      Assets.load({ alias: "basic", src: asteroidImage });
+      Assets.load({ alias: "basic", src: basicImage });
       Assets.load({ alias: "sniper", src: sniperImage });
 
       const stage = app.stage;
@@ -122,31 +129,14 @@ export default function TowerDefenseGame({ gameMode }) {
       } else {
         setGrid([]);
         setWaypoints([]);
-        setGridWaypoints([]);
+        setGridWaypoints(waypointGridCoords);
         initialWaypoints = waypointsRef.current;
         initialGridWaypoints = waypointGridCoords;
       }
 
       drawIsometricGrid(
         stage,
-        (col, row) =>
-          handlePlacement({
-            col,
-            row,
-            stage,
-            projectileContainer,
-            gameStateRef,
-            selectedTowerTypeRef,
-            goldRef,
-            gridWaypointsRef,
-            placedTowersRef,
-            setPlacedTowers,
-            setGold,
-            setSelectedTower,
-            setTooltip,
-            cols,
-            rows,
-          }),
+        () =>{},
         initialGridWaypoints,
         cols,
         rows
@@ -230,6 +220,85 @@ export default function TowerDefenseGame({ gameMode }) {
     }
   };
 
+  // --- Drag & Drop Handlers ---
+  const handleDragStart = (type) => {
+    setDraggingTowerType(type);
+    setGhostPos(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingTowerType(null);
+    setGhostPos(null);
+  };
+
+  // Mouse move over Pixi canvas to update ghost position
+  useEffect(() => {
+    if (!draggingTowerType || !pixiContainerRef.current) return;
+
+    const handleMouseMove = (e) => {
+      const rect = pixiContainerRef.current.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      setGhostPos({ x: mouseX, y: mouseY });
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, [draggingTowerType]);
+
+  const getStageCoords = (mouseX, mouseY) => {
+    const app = appRef.current;
+    if (!app) return { x: mouseX, y: mouseY };
+    const stage = app.stage;
+    const scale = stage.scale.x; // assuming uniform scaling
+    const stageX = (mouseX - stage.x) / scale;
+    const stageY = (mouseY - stage.y) / scale;
+    return { x: stageX, y: stageY };
+  };
+
+  // --- Handle drop on grid ---
+  const handleCanvasDrop = (e) => {
+    if (!draggingTowerType) return;
+    e.preventDefault();
+    const rect = pixiContainerRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const { x, y } = getStageCoords(mouseX, mouseY);
+    const { col, row } = screenToGrid(x, y, cols, rows);
+    console.log(col, row);
+    console.log(gridWaypointsRef.current);
+    handlePlacement({
+      col,
+      row,
+      stage: appRef.current.stage,
+      projectileContainer: appRef.current.stage.children.find(c => c.zIndex === 15),
+      gameStateRef,
+      selectedTowerTypeRef: { current: draggingTowerType },
+      goldRef,
+      gridWaypointsRef,
+      placedTowersRef,
+      setPlacedTowers,
+      setGold,
+      setSelectedTower,
+      setTooltip,
+      cols,
+      rows,
+      selectedTowerRef,
+    });
+    handleDragEnd();
+  };
+
+  useEffect(() => {
+    const canvas = pixiContainerRef.current;
+    if (!canvas) return;
+    if (draggingTowerType) {
+      canvas.addEventListener("mouseup", handleCanvasDrop);
+    }
+    return () => {
+      canvas.removeEventListener("mouseup", handleCanvasDrop);
+    };
+  }, [draggingTowerType, handleCanvasDrop]);
+
   useEffect(() => {
     initializeGame();
     return () => {
@@ -247,13 +316,31 @@ export default function TowerDefenseGame({ gameMode }) {
   // --- Render ---
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
-      <div style={{ position: "absolute", top: 10, left: 10, zIndex: 10 }}>
-        {["basic", "sniper", "rapid", "splash"].map((type) => (
-          <TowerTypeButton
+      {/* Drag & Drop Tower Palette */}
+      <div style={{ position: "absolute", top: 10, left: 10, zIndex: 20, display: "flex", gap: 8 }}>
+        {[
+          { type: "basic", img: basicImage },
+          { type: "sniper", img: sniperImage },
+          { type: "rapid", img: rapidImage },
+          { type: "splash", img: splashImage },
+          // Add more tower types and images as needed
+        ].map(({ type, img }) => (
+          <img
             key={type}
-            type={type}
-            selectedTowerType={selectedTowerType}
-            onClick={setSelectedTowerType}
+            src={img}
+            alt={type}
+            draggable={false}
+            style={{
+              width: 48,
+              height: 48,
+              border: draggingTowerType === type ? "2px solid #66ccff" : "2px solid #ccc",
+              borderRadius: 8,
+              opacity: draggingTowerType && draggingTowerType !== type ? 0.5 : 1,
+              cursor: "grab",
+              background: "#222",
+            }}
+            onMouseDown={() => handleDragStart(type)}
+            onMouseUp={handleDragEnd}
           />
         ))}
         <GameControlButton text="Start Wave" onClick={startWave} disabled={gameState === "wave"} />
@@ -263,6 +350,36 @@ export default function TowerDefenseGame({ gameMode }) {
         />
         <GameControlButton text={isPaused ? "Resume" : "Pause"} onClick={() =>{togglePause(); isPausedRef.current = !isPausedRef.current}} />
       </div>
+
+      {/* Ghost Tower Visual Feedback */}
+      {draggingTowerType && ghostPos && (
+        <img
+        src={
+          draggingTowerType === "basic"
+            ? basicImage
+            : draggingTowerType === "sniper"
+            ? sniperImage
+            : draggingTowerType === "rapid"
+            ? rapidImage
+            : draggingTowerType === "splash"
+            ? splashImage
+            : basicImage
+        }
+          alt="ghost"
+          style={{
+            position: "absolute",
+            left: ghostPos.x - 24,
+            top: ghostPos.y - 24,
+            width: 48,
+            height: 48,
+            opacity: 0.5,
+            pointerEvents: "none",
+            zIndex: 100,
+            filter: "drop-shadow(0 0 8px #66ccff)",
+          }}
+        />
+      )}
+
       <GameInfo baseHealth={baseHealth} gold={gold} currentWave={currentWave} />
       {selectedTower && (
         <TowerActionButtons

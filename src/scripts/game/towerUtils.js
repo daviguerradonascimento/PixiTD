@@ -17,12 +17,18 @@ export function handlePlacement({
   setTooltip,
   cols,
   rows,
+  selectedTowerRef,
 }) {
   if (gameStateRef.current !== "build") return;
 
   const towerBuildCost = Tower.prototype.baseStats[selectedTowerTypeRef.current].buildCost;
   if (goldRef.current < towerBuildCost) {
     console.log("Not enough gold to place tower.");
+    return;
+  }
+
+  if (col < 0 ||row < 0 ||col >= cols || row >= rows ) {
+    console.log("Cannot place tower outside the grid.");
     return;
   }
 
@@ -44,7 +50,13 @@ export function handlePlacement({
 
   const tower = new Tower(towerX, towerY, projectileContainer, selectedTowerTypeRef.current);
   tower.zIndex = 2;
-  tower.onSelect = (towerInstance) => setSelectedTower(towerInstance);
+  tower.onSelect = (towerInstance) => {
+    if (selectedTowerRef.current && selectedTowerRef.current !== towerInstance) {
+      selectedTowerRef.current.setSelected(false);
+    }
+    selectedTowerRef.current = towerInstance;
+    setSelectedTower(towerInstance);
+  };
   tower.onHover = (stats, x, y) => setTooltip({ visible: true, x, y, stats });
   tower.onOut = () => setTooltip((prev) => ({ ...prev, visible: false }));
 
