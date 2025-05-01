@@ -13,10 +13,10 @@ export class Tower extends PIXI.Container {
 
 
     this.baseStats = {
-      basic: { texture: "assets/asteroid.png",color: 0x3399ff, range: 100, cooldown: 60, upgradeCost: 50 },
-      sniper: { texture: "basicTower.png",color: 0xffcc00, range: 200, cooldown: 120, upgradeCost: 80 },
-      rapid: { texture: "basicTower.png",color: 0x00ff99, range: 80, cooldown: 20, upgradeCost: 60 },
-      splash: { texture: "basicTower.png",color: 0xff3333, range: 100, cooldown: 80, upgradeCost: 70 },
+      basic: { texture: "assets/asteroid.png",color: 0x3399ff, range: 100, cooldown: 60, upgradeCost: 50, buildCost: 50 },
+      sniper: { texture: "basicTower.png",color: 0xffcc00, range: 200, cooldown: 120, upgradeCost: 80, buildCost: 75 },
+      rapid: { texture: "basicTower.png",color: 0x00ff99, range: 80, cooldown: 20, upgradeCost: 60, buildCost: 60 },
+      splash: { texture: "basicTower.png",color: 0xff3333, range: 100, cooldown: 80, upgradeCost: 70, buildCost: 70 },
     }[type];
 
     this.projectileContainer = projectileContainer;
@@ -191,3 +191,10 @@ export class Tower extends PIXI.Container {
     };
   }
 }
+
+Tower.prototype.baseStats = {
+  basic: { texture: "assets/asteroid.png",color: 0x3399ff, range: 100, cooldown: 60, upgradeCost: 50, buildCost: 50 },
+  sniper: { texture: "basicTower.png",color: 0xffcc00, range: 200, cooldown: 120, upgradeCost: 80, buildCost: 75 },
+  rapid: { texture: "basicTower.png",color: 0x00ff99, range: 80, cooldown: 20, upgradeCost: 60, buildCost: 60 },
+  splash: { texture: "basicTower.png",color: 0xff3333, range: 100, cooldown: 80, upgradeCost: 70, buildCost: 70 },
+};

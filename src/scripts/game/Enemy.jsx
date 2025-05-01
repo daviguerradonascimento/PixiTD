@@ -29,9 +29,10 @@ export const waypoints = waypointGridCoords.map(([col, row]) => {
 });
 
 export class Enemy extends PIXI.Graphics {
-  constructor(type = "basic", onDeath = () => {}, onReachedBase = () => {}) {
+  constructor(type = "basic", onDeath = () => {}, onReachedBase = () => {}, waypointsa = waypoints) {
     super();
-
+    
+    this.waypoints = waypointsa;
     this.type = type;
     this.speed = 1;
     this.maxHp = 100;
@@ -60,19 +61,17 @@ export class Enemy extends PIXI.Graphics {
 
     
     this.waypointIndex = 0;
-    this.position.set(waypoints[0].x, waypoints[0].y);
+    this.position.set(this.waypoints[0].x, this.waypoints[0].y);
 
     this.onDeath = typeof onDeath === "function" ? onDeath : () => {};
     this.onReachedBase = typeof onReachedBase === "function" ? onReachedBase : () => {};
-    
+
     this.body = new PIXI.Graphics();
     this.body.fill(this.color);
     this.body.circle(0, 0, (TILE_HEIGHT / 2));
     this.body.fill();
     this.addChild(this.body);
 
-    // this.hpBar = new PIXI.Graphics();
-    // this.addChild(this.hpBar);
     this.hpBarBackground = new PIXI.Graphics();
     this.addChild(this.hpBarBackground);
     this.hpBarFill = new PIXI.Graphics();
@@ -82,7 +81,7 @@ export class Enemy extends PIXI.Graphics {
   }
 
   update(gameSpeed) {
-    const target = waypoints[this.waypointIndex];
+    const target = this.waypoints[this.waypointIndex];
     const dx = target.x - this.x;
     const dy = target.y - this.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -91,7 +90,7 @@ export class Enemy extends PIXI.Graphics {
       this.x = target.x;
       this.y = target.y;
       this.waypointIndex++;
-      if (this.waypointIndex >= waypoints.length) {
+      if (this.waypointIndex >= this.waypoints.length) {
         this.onReachedBase?.(this);
         this.destroy(); // Reached base
         return;
@@ -108,30 +107,26 @@ export class Enemy extends PIXI.Graphics {
     this.hp -= amount;
     this.flashHit();
     this.updateHpBar();
-    // console.log(`Enemy took ${amount} damage, remaining HP: ${this.hp}`);
     if (this.hp <= 0) {
-      // console.log('Enemy destroyed');
       this.onDeath();
       this.destroy();
     }
   }
 
-
   updateHpBar() {
-    // this.hpBar.clear();
-      const barWidth = 32;
-      const barHeight = 5;
-  
-      this.hpBarBackground.clear();
-      this.hpBarBackground.fill(0x000000);
-      this.hpBarBackground.rect(-barWidth / 2, -26, barWidth, barHeight);
-      this.hpBarBackground.fill();
-  
-      const hpPercent = Math.max(0, this.hp / this.maxHp);
-      this.hpBarFill.clear();
-      this.hpBarFill.fill(0x00ff00);
-      this.hpBarFill.rect(-barWidth / 2, -26, barWidth * hpPercent, barHeight);
-      this.hpBarFill.fill();
+    const barWidth = 32;
+    const barHeight = 5;
+
+    this.hpBarBackground.clear();
+    this.hpBarBackground.fill(0x000000);
+    this.hpBarBackground.rect(-barWidth / 2, -26, barWidth, barHeight);
+    this.hpBarBackground.fill();
+
+    const hpPercent = Math.max(0, this.hp / this.maxHp);
+    this.hpBarFill.clear();
+    this.hpBarFill.fill(0x00ff00);
+    this.hpBarFill.rect(-barWidth / 2, -26, barWidth * hpPercent, barHeight);
+    this.hpBarFill.fill();
   }
 
   flashHit() {
@@ -140,5 +135,4 @@ export class Enemy extends PIXI.Graphics {
       this.body.tint = 0xff3333;
     }, 100);
   }
-
 }

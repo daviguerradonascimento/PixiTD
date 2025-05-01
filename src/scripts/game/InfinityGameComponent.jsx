@@ -4,10 +4,11 @@ import {Assets} from "pixi.js";
 import { Enemy } from "./Enemy.jsx";
 import { Tower } from "./Tower.jsx";
 import { ProceduralLevelGenerator } from "./ProceduralLevelGenerator.js";
-import { RandomWaveGenerator } from "./RandomWaveGenerator.js";
+import { WaveManager } from "./WaveManager.jsx";
 import { toIsometric, screenToGrid, getBlockedTiles, drawIsometricGrid, gridConsts } from "./gridUtils";
 import asteroidImage from "../../sprites/basic.png";
 import sniperImage from "../../sprites/sniper.png";
+import Tooltip from "./Tooltip.jsx"; // Import Tooltip
 
 const InfinityModeGame = () => {
   const pixiContainerRef = useRef(null);
@@ -15,6 +16,7 @@ const InfinityModeGame = () => {
   const [level, setLevel] = useState(1);
   const [baseHealth, setBaseHealth] = useState(10);
   const [gold, setGold] = useState(100);
+  const goldRef = useRef(gold);
   const [gameState, setGameState] = useState("build"); // "build" or "wave"
   const gameStateRef = useRef(null);
   const [selectedTowerType, setSelectedTowerType] = useState("basic");
@@ -22,13 +24,36 @@ const InfinityModeGame = () => {
   const [selectedTower, setSelectedTower] = useState(null);
   const selectedTowerRef = useRef(null);
   const [gameSpeed, setGameSpeed] = useState(1);
+  const [currentWave, setCurrentWave] = useState(1); // Add currentWave state
+  const [tooltip, setTooltip] = useState({ // Add tooltip state
+    visible: false,
+    x: 0,
+    y: 0,
+    stats: {},
+  });
 
   const [grid, setGrid] = useState([]);
   const [waypoints, setWaypoints] = useState([]);
+  const [gridWaypoints, setGridWaypoints] = useState([]);
+  const gridWaypointsRef = useRef(null);
+  const waveManagerRef = useRef(null);
+
+  // Generate random grid dimensions
+  const [cols, setCols] = useState(Math.floor(Math.random() * 10) + 10); // Random between 10 and 19
+  const [rows, setRows] = useState(Math.floor(Math.random() * 8) + 8); // Random between 8 and 15
 
   useEffect(() => {
     gameStateRef.current = gameState;
   }, [gameState]);
+
+  useEffect(() => {
+    gridWaypointsRef.current = gridWaypoints;
+  }, [gridWaypoints]);
+
+  useEffect(() => {
+      goldRef.current = gold;
+    }, [gold]);
+  
 
   const initializeGame = useCallback(() => {
     if (!pixiContainerRef.current || appRef.current) return;
@@ -62,15 +87,17 @@ const InfinityModeGame = () => {
       const placedTowers = [];
 
       // Generate level and waypoints
-      const levelGenerator = new ProceduralLevelGenerator(16, 12);
+      const levelGenerator = new ProceduralLevelGenerator(cols, rows);
       const newGrid = levelGenerator.generateLevel();
-      const newWaypoints = levelGenerator.getWaypoints();
+      const newWaypoints = levelGenerator.getWaypoints(cols, rows); // Isometric waypoints
+      const newGridWaypoints = levelGenerator.getGridWaypoints(); // Grid waypoints
 
       setGrid(newGrid);
       setWaypoints(newWaypoints);
+      setGridWaypoints(newGridWaypoints);
 
       drawIsometricGrid(stage, (col, row) =>
-        handlePlacement(col, row, stage, placedTowers, projectileContainer), newWaypoints
+        handlePlacement(col, row, stage, placedTowers, projectileContainer), newGridWaypoints, cols, rows
       );
 
       const clearProjectiles = () => {
@@ -84,8 +111,8 @@ const InfinityModeGame = () => {
 
         app.renderer.resize(containerWidth, containerHeight);
 
-        const totalGridWidth = (gridConsts.GRID_COLS + gridConsts.GRID_ROWS) * (gridConsts.TILE_WIDTH / 2);
-        const totalGridHeight = (gridConsts.GRID_COLS + gridConsts.GRID_ROWS) * (gridConsts.TILE_HEIGHT / 2);
+        const totalGridWidth = (cols + rows) * (gridConsts.TILE_WIDTH / 2);
+        const totalGridHeight = (cols + rows) * (gridConsts.TILE_HEIGHT / 2);
         const scale = Math.min(
           containerWidth / totalGridWidth,
           containerHeight / totalGridHeight
@@ -98,29 +125,62 @@ const InfinityModeGame = () => {
 
       resizeGame();
       window.addEventListener("resize", resizeGame);
+
+      // Create WaveManager and store it in the ref
+      const waveManager = new WaveManager(
+        app,
+        () => {},
+        (enemy) => setGold((prev) => prev + (enemy.goldValue || 10)),
+        (enemy) => setBaseHealth((prev) => Math.max(0, prev - enemy.damageValue)),
+        newWaypoints
+      );
+      waveManagerRef.current = waveManager;
+
+      app.ticker.add(() => {
+        if (gameStateRef.current === "wave" && waveManagerRef.current) {
+          waveManagerRef.current.update(app.ticker.speed);
+          if (waveManagerRef.current.isWaveComplete()) {
+            setGameState("build");
+            clearProjectiles();
+            setCurrentWave(waveManagerRef.current.currentWave + 1);
+          }
+        }
+        placedTowers.forEach((tower) => tower.update(waveManagerRef.current?.getEnemies() || [], app.ticker.speed));
+        projectileContainer.children.forEach((proj) => proj.update?.(app.ticker.speed));
+        stage.children.sort((a, b) => a.y - b.y); // depth sorting
+      });
     });
-  }, []);
+  }, [cols, rows, initializeGame]);
 
   const handlePlacement = (col, row, stage, placedTowers, projectileContainer) => {
-    // const pos = e.data.global;
-    // const localPos = stage.toLocal(pos);
-    // const { col, row } = screenToGrid(localPos.x, localPos.y);
     if (gameStateRef.current !== "build") return;
 
-    const blockedTiles = getBlockedTiles(waypoints);
+    const towerType = selectedTowerTypeRef.current;
+    const towerBuildCost = Tower.prototype.baseStats[towerType].buildCost;
+
+    if (goldRef.current < towerBuildCost) {
+        console.log("Not enough gold to place tower.");
+        return;
+    }
+
+    const blockedTiles = getBlockedTiles(gridWaypointsRef.current);
     if (blockedTiles.some(([bx, by]) => bx === col && by === row)) {
       console.log("Cannot place tower on path tile.");
       return;
     }
 
-    const { x, y } = toIsometric(col, row);
-    // const towerX = x + TILE_WIDTH / 2;
-    // const towerY = y + TILE_HEIGHT / 2;
-    const offsetX = ((gridConsts.GRID_COLS + gridConsts.GRID_ROWS) * (64 / 2)) / 2;
+    // Local toIsometric function that captures cols and rows
+    const localToIsometric = (col, row) => {
+      const x = (col - row) * (gridConsts.TILE_WIDTH / 2);
+      const y = (col + row) * (gridConsts.TILE_WIDTH / 4);
+      return { x, y };
+    };
+
+    const { x, y } = localToIsometric(col, row);
+    const offsetX = ((cols + rows) * (gridConsts.TILE_WIDTH / 2)) / 2;
     const towerX = x + offsetX + gridConsts.TILE_WIDTH / 2;
     const towerY = y + gridConsts.TILE_HEIGHT / 2;
-    console.log("Tower position:", col, row);
-    console.log("Tower position:", towerX, towerY);
+
     if (placedTowers.some((t) => t.x === towerX && t.y === towerY)) {
       console.log("Tower already exists at this location.");
       return;
@@ -138,8 +198,15 @@ const InfinityModeGame = () => {
       selectedTowerRef.current = towerInstance;
       setSelectedTower(towerInstance);
     };
+    tower.onHover = (stats, x, y) => { // Add onHover handler
+      setTooltip({ visible: true, x, y, stats });
+    };
+    tower.onOut = () => { // Add onOut handler
+      setTooltip({ ...tooltip, visible: false });
+    };
     stage.addChild(tower);
     placedTowers.push(tower);
+    setGold(goldRef.current - towerBuildCost);
   };
 
   useEffect(() => {
@@ -150,8 +217,108 @@ const InfinityModeGame = () => {
     };
   }, [initializeGame]);
 
+  const startWave = () => {
+    if (gameState !== "wave" && waveManagerRef.current) {
+      waveManagerRef.current.spawnRandomWave(currentWave);
+      setGameState("wave");
+    }
+  };
+
+  useEffect(() => {
+    if (appRef.current) {
+      appRef.current.ticker.speed = gameSpeed;
+    }
+  }, [gameSpeed]);
+
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
+      <div style={{ position: "absolute", top: 10, left: 10, zIndex: 10 }}>
+        {["basic", "sniper", "rapid", "splash"].map((type) => (
+          <button
+            key={type}
+            onClick={() => setSelectedTowerType(type)}
+            style={{
+              padding: "6px 12px",
+              backgroundColor: selectedTowerType === type ? "#66ccff" : "#ccc",
+              color: "#000",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontWeight: "bold",
+              marginRight: "4px",
+            }}
+          >
+            {type.charAt(0).toUpperCase() + type.slice(1)}
+          </button>
+        ))}
+        <button
+          onClick={startWave}
+          disabled={gameState === "wave"}
+          style={{
+            padding: "6px 12px",
+            backgroundColor: gameState === "wave" ? "#ccc" : "#007bff",
+            color: "#fff",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontWeight: "bold",
+            marginRight: "4px",
+          }}
+        >
+          Start Wave
+        </button>
+
+        <button
+          onClick={() => setGameSpeed(gameSpeed === 1 ? 2 : 1)}
+          style={{
+            padding: "6px 12px",
+            backgroundColor: "#ccc",
+            color: "#000",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontWeight: "bold",
+            marginRight: "4px",
+          }}
+        >
+          Speed: {gameSpeed}x
+        </button>
+      </div>
+
+      <div style={{ position: "absolute", top: 40, left: 10, zIndex: 10, color: "red" }}>
+        Base HP: {baseHealth}
+      </div>
+      <div style={{ position: "absolute", top: 70, left: 10, zIndex: 10, color: "yellow" }}>
+        Gold: {gold}
+      </div>
+      <div style={{ position: "absolute", top: 100, left: 10, zIndex: 10, color: "white" }}>
+        Wave: {currentWave}
+      </div>
+
+      {selectedTowerRef.current && (
+        <div style={{ position: "absolute", top: 10, right: 10, zIndex: 10 }}>
+          <button
+            onClick={() => {
+              selectedTowerRef.current.upgrade(setGold, gold);
+              selectedTowerRef.current = null;
+              setSelectedTower(null);
+            }}
+            disabled={gameState === "wave"}
+            style={{
+              padding: "6px 12px",
+              backgroundColor: gameState === "wave" ? "#ccc" : "#4CAF50",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontWeight: "bold",
+            }}
+          >
+            Upgrade
+          </button>
+        </div>
+      )}
+      {tooltip.visible && <Tooltip x={tooltip.x} y={tooltip.y} stats={tooltip.stats}/>} {/* Render Tooltip */}
       <div ref={pixiContainerRef} style={{ width: "100%", height: "100%" }} />
     </div>
   );

@@ -18,6 +18,7 @@ export default function TowerDefenseGame() {
   const selectedTowerRef = useRef(null);
   const [baseHealth, setBaseHealth] = useState(10);
   const [gold, setGold] = useState(100);
+  const goldRef = useRef(gold);
   const [gameState, setGameState] = useState("build"); // "build" or "wave"
   const gameStateRef = useRef(null);
   const waveManagerRef = useRef(null); // Ref for WaveManager
@@ -39,6 +40,10 @@ export default function TowerDefenseGame() {
   useEffect(() => {
     gameStateRef.current = gameState;
   }, [gameState]);
+
+  useEffect(() => {
+    goldRef.current = gold;
+  }, [gold]);
 
   const initializeGame = useCallback(() => {
     if (!pixiContainerRef.current || appRef.current) return;
@@ -137,10 +142,16 @@ export default function TowerDefenseGame() {
   }, []);
 
   const handlePlacement = (col, row, stage, placedTowers, projectileContainer) => {
-    // const pos = e.data.global;
-    // const localPos = stage.toLocal(pos);
-    // const { col, row } = screenToGrid(localPos.x, localPos.y);
+
     if (gameStateRef.current !== "build") return;
+
+    const towerType = selectedTowerTypeRef.current;
+    const towerBuildCost = Tower.prototype.baseStats[towerType].buildCost;
+
+    if (goldRef.current < towerBuildCost) {
+      console.log("Not enough gold to place tower.");
+      return;
+    }
 
     const blockedTiles = getBlockedTiles(waypointGridCoords);
     if (blockedTiles.some(([bx, by]) => bx === col && by === row)) {
@@ -151,7 +162,7 @@ export default function TowerDefenseGame() {
     const { x, y } = toIsometric(col, row);
     // const towerX = x + TILE_WIDTH / 2;
     // const towerY = y + TILE_HEIGHT / 2;
-    const offsetX = ((gridConsts.GRID_COLS + gridConsts.GRID_ROWS) * (64 / 2)) / 2;
+    const offsetX = ((gridConsts.GRID_COLS + gridConsts.GRID_ROWS) * (gridConsts.TILE_WIDTH / 2)) / 2;
     const towerX = x + offsetX + gridConsts.TILE_WIDTH / 2;
     const towerY = y + gridConsts.TILE_HEIGHT / 2;
     console.log("Tower position:", col, row);
@@ -182,6 +193,8 @@ export default function TowerDefenseGame() {
     };
     stage.addChild(tower);
     placedTowers.push(tower);
+
+    setGold(goldRef.current - towerBuildCost);
   };
 
   useEffect(() => {
