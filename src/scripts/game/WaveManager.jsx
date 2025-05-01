@@ -10,6 +10,7 @@ export class WaveManager {
     this.activeEnemies = [];
     this.isSpawning = false;
     this.waypoints = waypoints || [];
+    console.log("waypoints here", this.waypoints);
     
     this.waves = [
       { enemies: ["basic", "basic", "basic"], interval: 1000 },
@@ -53,7 +54,7 @@ export class WaveManager {
     }, wave.interval);
   }
 
-  update(gameSpeed) {
+  update(gameSpeed, gameMode) {
     for (let i = this.activeEnemies.length - 1; i >= 0; i--) {
       const enemy = this.activeEnemies[i];
       enemy.update(gameSpeed);
@@ -107,6 +108,7 @@ export class WaveManager {
   }
 
   spawnEnemy(type, health, speed, goldValue, damageValue) {
+    console.log('aaaaa',this.waypoints)
     const enemy = new Enemy( type, () => {
       this.enemies = this.enemies.filter((e) => e !== enemy);
       this.onEnemyDeath(enemy);

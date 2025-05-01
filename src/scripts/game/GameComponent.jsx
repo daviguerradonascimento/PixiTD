@@ -1,15 +1,22 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import * as PIXI from "pixi.js";
-import {Assets} from "pixi.js";
+import { Assets } from "pixi.js";
 import { Enemy, waypoints, waypointGridCoords } from "./Enemy.jsx";
 import { Tower } from "./Tower.jsx";
+import { ProceduralLevelGenerator } from "./ProceduralLevelGenerator.js";
 import { WaveManager } from "./WaveManager.jsx";
+import {
+  toIsometric,
+  screenToGrid,
+  getBlockedTiles,
+  drawIsometricGrid,
+  gridConsts,
+} from "./gridUtils";
 import asteroidImage from "../../sprites/basic.png";
 import sniperImage from "../../sprites/sniper.png";
-import { toIsometric, screenToGrid, getBlockedTiles, drawIsometricGrid, gridConsts } from "./gridUtils";
 import Tooltip from "./Tooltip.jsx";
 
-export default function TowerDefenseGame() {
+export default function TowerDefenseGame({ gameMode }) {
   const pixiContainerRef = useRef(null);
   const appRef = useRef(null);
   const [selectedTowerType, setSelectedTowerType] = useState("basic");
@@ -25,6 +32,17 @@ export default function TowerDefenseGame() {
   const [currentWave, setCurrentWave] = useState(1);
   const [gameSpeed, setGameSpeed] = useState(1);
   const [gameOver, setGameOver] = useState(false);
+  // const [gameMode, setGameMode] = useState("traditional"); // "traditional" or "infinity"
+
+  // Infinity Mode specific states
+  const [grid, setGrid] = useState([]);
+  const [waypoints, setWaypoints] = useState([]);
+  const waypointsRef = useRef([]);
+  const [gridWaypoints, setGridWaypoints] = useState([]);
+  const gridWaypointsRef = useRef(null);
+  const [cols, setCols] = useState(10);
+  const [rows, setRows] = useState(6);
+  
 
   const [tooltip, setTooltip] = useState({
     visible: false,
@@ -32,6 +50,15 @@ export default function TowerDefenseGame() {
     y: 0,
     stats: {},
   });
+
+  useEffect(() => {
+    if (!gameMode) return;
+  
+    if (gameMode === "infinity") {
+      setCols(Math.floor(Math.random() * 10) + 10); // 10–19
+      setRows(Math.floor(Math.random() * 8) + 8);   // 8–15
+    } 
+  }, [gameMode]);
 
   useEffect(() => {
     selectedTowerTypeRef.current = selectedTowerType;
@@ -44,6 +71,14 @@ export default function TowerDefenseGame() {
   useEffect(() => {
     goldRef.current = gold;
   }, [gold]);
+
+  useEffect(() => {
+    gridWaypointsRef.current = gridWaypoints;
+  }, [gridWaypoints]);
+
+  useEffect(() => {
+    waypointsRef.current = waypoints;
+  }, [waypoints]);
 
   const initializeGame = useCallback(() => {
     if (!pixiContainerRef.current || appRef.current) return;
@@ -59,13 +94,10 @@ export default function TowerDefenseGame() {
 
       Assets.load({ alias: "basic", src: asteroidImage }).then(() => {
         const tileTexture = Assets.get("basic");
-
       });
       Assets.load({ alias: "sniper", src: sniperImage }).then(() => {
         const tileTexture = Assets.get("sniper");
-
       });
-
 
       const stage = app.stage;
       stage.interactive = true;
@@ -77,41 +109,42 @@ export default function TowerDefenseGame() {
 
       const placedTowers = [];
 
-      // Create WaveManager and store it in the ref
-      waveManagerRef.current = new WaveManager(
-        app,
-        () => {},
-        (enemy) => setGold((prev) => prev + (enemy.goldValue || 10)),
-        (enemy) => setBaseHealth((prev) => Math.max(0, prev - enemy.damageValue))
+
+      let initialWaypoints = waypointsRef.current;
+      let initialGridWaypoints = gridWaypointsRef.current;
+
+      if (gameMode === "infinity") {
+
+        const levelGenerator = new ProceduralLevelGenerator(cols, rows);
+        const newGrid = levelGenerator.generateLevel();
+        const newWaypoints = levelGenerator.getWaypoints();
+        const newGridWaypoints = levelGenerator.getGridWaypoints();
+
+        setGrid(newGrid);
+        setWaypoints(newWaypoints);
+        setGridWaypoints(newGridWaypoints);
+
+        waypointsRef.current = newWaypoints;
+        gridWaypointsRef.current = newGridWaypoints;
+        initialWaypoints = newWaypoints;
+        initialGridWaypoints = newGridWaypoints
+      } else {
+        // Reset infinity mode specific states
+        setGrid([]);
+        setWaypoints([]);
+        setGridWaypoints([]);
+        initialWaypoints = waypointsRef.current;
+        initialGridWaypoints = waypointGridCoords;
+      }
+
+      drawIsometricGrid(
+        stage,
+        (col, row) =>
+          handlePlacement(col, row, stage, placedTowers, projectileContainer),
+        initialGridWaypoints,
+        cols,
+        rows
       );
-
-      drawIsometricGrid(stage, (col, row) =>
-        handlePlacement(col, row, stage, placedTowers, projectileContainer), waypointGridCoords
-      );
-
-
-      app.ticker.add(() => {
-        waveManagerRef.current.update(app.ticker.speed);
-        placedTowers.forEach((tower) => tower.update(waveManagerRef.current.getEnemies(), app.ticker.speed));
-        projectileContainer.children.forEach((proj) => proj.update?.(app.ticker.speed));
-        stage.children.sort((a, b) => a.y - b.y); // depth sorting
-
-        if (gameStateRef.current === "wave" && waveManagerRef.current.isWaveComplete()) {
-          setGameState("build");
-          clearProjectiles();
-          setCurrentWave(waveManagerRef.current.currentWave + 1);
-        }
-
-        if (baseHealth <= 0) {
-          setGameOver(true);
-          setGameState("gameOver");
-        } else if (waveManagerRef.current.currentWave >= waveManagerRef.current.waves.length && waveManagerRef.current.isWaveComplete()) {
-          setGameOver(true);
-          setTooltip({ visible: false});
-          setGameState("win");
-        }
-
-      });
 
       const clearProjectiles = () => {
         projectileContainer.removeChildren();
@@ -124,8 +157,8 @@ export default function TowerDefenseGame() {
 
         app.renderer.resize(containerWidth, containerHeight);
 
-        const totalGridWidth = (gridConsts.GRID_COLS + gridConsts.GRID_ROWS) * (gridConsts.TILE_WIDTH / 2);
-        const totalGridHeight = (gridConsts.GRID_COLS + gridConsts.GRID_ROWS) * (gridConsts.TILE_HEIGHT / 2);
+        const totalGridWidth = (cols + rows) * (gridConsts.TILE_WIDTH / 2);
+        const totalGridHeight = (cols + rows) * (gridConsts.TILE_HEIGHT / 2);
         const scale = Math.min(
           containerWidth / totalGridWidth,
           containerHeight / totalGridHeight
@@ -138,11 +171,41 @@ export default function TowerDefenseGame() {
 
       resizeGame();
       window.addEventListener("resize", resizeGame);
+
+      const waveManager = new WaveManager(
+        app,
+        () => {},
+        (enemy) => setGold((prev) => prev + (enemy.goldValue || 10)),
+        (enemy) =>
+          setBaseHealth((prev) => Math.max(0, prev - enemy.damageValue)),
+        initialWaypoints
+      );
+      waveManagerRef.current = waveManager;
+
+      app.ticker.add(() => {
+        if (gameStateRef.current === "wave" && waveManagerRef.current) {
+          waveManagerRef.current.update(app.ticker.speed, );
+          if (waveManagerRef.current.isWaveComplete()) {
+            setGameState("build");
+            clearProjectiles();
+            setCurrentWave(waveManagerRef.current.currentWave + 1);
+          }
+        }
+        placedTowers.forEach((tower) =>
+          tower.update(
+            waveManagerRef.current?.getEnemies() || [],
+            app.ticker.speed
+          )
+        );
+        projectileContainer.children.forEach((proj) =>
+          proj.update?.(app.ticker.speed)
+        );
+        stage.children.sort((a, b) => a.y - b.y); // depth sorting
+      });
     });
-  }, []);
+  }, [cols, rows, gameMode, initializeGame]);
 
   const handlePlacement = (col, row, stage, placedTowers, projectileContainer) => {
-
     if (gameStateRef.current !== "build") return;
 
     const towerType = selectedTowerTypeRef.current;
@@ -153,20 +216,25 @@ export default function TowerDefenseGame() {
       return;
     }
 
-    const blockedTiles = getBlockedTiles(waypointGridCoords);
+    let blockedTiles = [];
+    blockedTiles = getBlockedTiles(gridWaypointsRef.current);
+
     if (blockedTiles.some(([bx, by]) => bx === col && by === row)) {
       console.log("Cannot place tower on path tile.");
       return;
     }
 
-    const { x, y } = toIsometric(col, row);
-    // const towerX = x + TILE_WIDTH / 2;
-    // const towerY = y + TILE_HEIGHT / 2;
-    const offsetX = ((gridConsts.GRID_COLS + gridConsts.GRID_ROWS) * (gridConsts.TILE_WIDTH / 2)) / 2;
+    const localToIsometric = (col, row) => {
+      const x = (col - row) * (gridConsts.TILE_WIDTH / 2);
+      const y = (col + row) * (gridConsts.TILE_HEIGHT / 2);
+      return { x, y };
+    };
+
+    const { x, y } = localToIsometric(col, row);
+    const offsetX = ((cols + rows) * (gridConsts.TILE_WIDTH / 2)) / 2;
     const towerX = x + offsetX + gridConsts.TILE_WIDTH / 2;
     const towerY = y + gridConsts.TILE_HEIGHT / 2;
-    console.log("Tower position:", col, row);
-    console.log("Tower position:", towerX, towerY);
+
     if (placedTowers.some((t) => t.x === towerX && t.y === towerY)) {
       console.log("Tower already exists at this location.");
       return;
@@ -185,15 +253,15 @@ export default function TowerDefenseGame() {
       setSelectedTower(towerInstance);
     };
     tower.onHover = (stats, x, y) => {
-      if (gameStateRef.current === "gameOver") setTooltip({ visible: false, x, y, stats });;
+      // Add onHover handler
       setTooltip({ visible: true, x, y, stats });
     };
     tower.onOut = () => {
+      // Add onOut handler
       setTooltip({ ...tooltip, visible: false });
     };
     stage.addChild(tower);
     placedTowers.push(tower);
-
     setGold(goldRef.current - towerBuildCost);
   };
 
@@ -203,13 +271,16 @@ export default function TowerDefenseGame() {
       appRef.current?.destroy(true, true);
       window.removeEventListener("resize", () => {});
     };
-  }, [initializeGame]);
+  }, [initializeGame, gameMode]);
 
-  useEffect(() => {
-    if (gameState === "wave" && waveManagerRef.current) {
-      waveManagerRef.current.start();
+  const startWave = () => {
+    if (gameState !== "wave" && waveManagerRef.current) {
+      if(gameMode === "infinity") {waveManagerRef.current.spawnRandomWave(currentWave);}
+      else	{waveManagerRef.current.start();}
+      
+      setGameState("wave");
     }
-  }, [gameState]);
+  };
 
   useEffect(() => {
     if (appRef.current) {
@@ -219,35 +290,16 @@ export default function TowerDefenseGame() {
 
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
-
-      {gameOver && (
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              backgroundColor: "rgba(0, 0, 0, 0.8)",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              fontSize: "3em",
-              color: "white",
-              zIndex: 20,
-            }}
-          >
-            {gameState === "gameOver" ? "Game Over!" : "You Win!"}
-          </div>
-        )}
       <div style={{ position: "absolute", top: 10, left: 10, zIndex: 10 }}>
+        {/* Tower Type Selection */}
         {["basic", "sniper", "rapid", "splash"].map((type) => (
           <button
             key={type}
             onClick={() => setSelectedTowerType(type)}
             style={{
               padding: "6px 12px",
-              backgroundColor: selectedTowerType === type ? "#66ccff" : "#ccc",
+              backgroundColor:
+                selectedTowerType === type ? "#66ccff" : "#ccc",
               color: "#000",
               border: "none",
               borderRadius: "4px",
@@ -260,7 +312,7 @@ export default function TowerDefenseGame() {
           </button>
         ))}
         <button
-          onClick={() => setGameState("wave")}
+          onClick={startWave}
           disabled={gameState === "wave"}
           style={{
             padding: "6px 12px",
@@ -293,19 +345,49 @@ export default function TowerDefenseGame() {
         </button>
       </div>
 
-      <div style={{ position: "absolute", top: 40, left: 10, zIndex: 10, color: "red" }}>
+      <div
+        style={{
+          position: "absolute",
+          top: 40,
+          left: 10,
+          zIndex: 10,
+          color: "red",
+        }}
+      >
         Base HP: {baseHealth}
       </div>
-      <div style={{ position: "absolute", top: 70, left: 10, zIndex: 10, color: "yellow" }}>
+      <div
+        style={{
+          position: "absolute",
+          top: 70,
+          left: 10,
+          zIndex: 10,
+          color: "yellow",
+        }}
+      >
         Gold: {gold}
       </div>
-      <div style={{ position: "absolute", top: 100, left: 10, zIndex: 10, color: "white" }}>
+      <div
+        style={{
+          position: "absolute",
+          top: 100,
+          left: 10,
+          zIndex: 10,
+          color: "white",
+        }}
+      >
         Wave: {currentWave}
       </div>
-      
 
       {selectedTowerRef.current && (
-        <div style={{ position: "absolute", top: 10, right: 10, zIndex: 10 }}>
+        <div
+          style={{
+            position: "absolute",
+            top: 10,
+            right: 10,
+            zIndex: 10,
+          }}
+        >
           <button
             onClick={() => {
               selectedTowerRef.current.upgrade(setGold, gold);
@@ -327,7 +409,10 @@ export default function TowerDefenseGame() {
           </button>
         </div>
       )}
-      {tooltip.visible && <Tooltip x={tooltip.x} y={tooltip.y} stats={tooltip.stats}/>}
+      {tooltip.visible && (
+        <Tooltip x={tooltip.x} y={tooltip.y} stats={tooltip.stats} />
+      )}{" "}
+      {/* Render Tooltip */}
       <div ref={pixiContainerRef} style={{ width: "100%", height: "100%" }} />
     </div>
   );

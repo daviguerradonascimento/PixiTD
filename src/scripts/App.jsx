@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import TowerDefenseGame from "./game/GameComponent";
-import InfinityModeGame from "./game/InfinityGameComponent"; // Import the new component
 
 const App = () => {
   const [gameMode, setGameMode] = useState(null); // null, "traditional", or "infinity"
@@ -48,12 +47,9 @@ const App = () => {
             Infinity Mode
           </button>
         </div>
-      ) : gameMode === "traditional" ? (
-        // Traditional Mode
-        <TowerDefenseGame />
       ) : (
-        // Infinity Mode
-        <InfinityModeGame />
+        // Game Component
+        <TowerDefenseGame gameMode={gameMode} />
       )}
     </div>
   );

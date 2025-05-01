@@ -33,6 +33,7 @@ export class Enemy extends PIXI.Graphics {
     super();
     
     this.waypoints = waypointsa;
+    console.log("waypoints", this.waypoints);
     this.type = type;
     this.speed = 1;
     this.maxHp = 100;
