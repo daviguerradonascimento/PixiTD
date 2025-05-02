@@ -9,6 +9,7 @@ export class WaveManager {
     this.currentWave = 0;
     this.activeEnemies = [];
     this.isSpawning = false;
+    this.isPaused = false;
     
     // Store custom waypoints if provided
     this.waypoints = customWaypoints || waypoints;
@@ -28,47 +29,61 @@ export class WaveManager {
     this.spawnWave(this.currentWave);
   }
 
+  setPaused(paused) {
+    this.isPaused = paused;
+  }
+
   spawnWave(index) {
     const wave = this.waves[index];
     if (!wave) return;
     this.isSpawning = true;
+    
     let i = 0;
-    const timer = setInterval(() => {
+    let lastSpawnTime = Date.now();
+    
+    const spawnNext = () => {
       if (!this.app || !this.app.stage) {
-        clearInterval(timer);
-        const timerIndex = this.spawnTimers.indexOf(timer);
-        if (timerIndex !== -1) {
-          this.spawnTimers.splice(timerIndex, 1);
-        }
-        return;
-      }
-      
-      if (i >= wave.enemies.length) {
-        clearInterval(timer);
-        const timerIndex = this.spawnTimers.indexOf(timer);
-        if (timerIndex !== -1) {
-          this.spawnTimers.splice(timerIndex, 1);
-        }
-        this.currentWave++;
         this.isSpawning = false;
         return;
       }
-
-      const enemyType = wave.enemies[i];
-      // Use our spawnEnemy method that uses this.waypoints
-      const baseStats = enemyBaseStats[enemyType];
-      this.spawnEnemy(
-        enemyType,
-        baseStats.baseHealth,
-        baseStats.baseSpeed,
-        baseStats.goldValue,
-        baseStats.baseDamage
-      );
       
-      i++;
-    }, wave.interval);
+      // If paused, just reschedule the check
+      if (this.isPaused) {
+        const timer = setTimeout(spawnNext, 100);
+        this.spawnTimers.push(timer);
+        return;
+      }
+      
+      const now = Date.now();
+      const elapsed = now - lastSpawnTime;
+      
+      if (elapsed >= wave.interval) {
+        if (i >= wave.enemies.length) {
+          this.currentWave++;
+          this.isSpawning = false;
+          return;
+        }
+        
+        const enemyType = wave.enemies[i];
+        const baseStats = enemyBaseStats[enemyType];
+        this.spawnEnemy(
+          enemyType,
+          baseStats.baseHealth,
+          baseStats.baseSpeed,
+          baseStats.goldValue,
+          baseStats.baseDamage
+        );
+        
+        i++;
+        lastSpawnTime = now;
+      }
+      
+      const checkInterval = Math.max(16, Math.min(wave.interval / 4, 100));
+      const timer = setTimeout(spawnNext, checkInterval);
+      this.spawnTimers.push(timer);
+    };
     
-    this.spawnTimers.push(timer);
+    spawnNext();
   }
 
   update(gameSpeed, gameMode) {
@@ -94,42 +109,51 @@ export class WaveManager {
   spawnRandomWave(waveIndex) {
     this.isSpawning = true;
     const wave = this.generateWave(waveIndex);
-    let delay = 0;
     
-    wave.enemies.forEach((enemyType) => {
-      const timer = setTimeout(() => {
-        // First check if app still exists
-        if (!this.app || !this.app.stage) {
-          const timerIndex = this.delayTimers.indexOf(timer);
-          if (timerIndex !== -1) {
-            this.delayTimers.splice(timerIndex, 1);
-          }
+    let enemyIndex = 0;
+    let lastSpawnTime = Date.now();
+    
+    const spawnNextRandom = () => {
+      if (!this.app || !this.app.stage) {
+        this.isSpawning = false;
+        return;
+      }
+      
+      if (this.isPaused) {
+        const timer = setTimeout(spawnNextRandom, 100);
+        this.delayTimers.push(timer);
+        return;
+      }
+      
+      const now = Date.now();
+      const elapsed = now - lastSpawnTime;
+      
+      if (elapsed >= wave.interval) {
+        if (enemyIndex >= wave.enemies.length) {
+          this.isSpawning = false;
+          this.currentWave++;
           return;
         }
         
-        this.spawnEnemy(enemyType.type, enemyType.health, enemyType.speed, enemyType.goldValue, enemyType.damageValue);
+        const enemyType = wave.enemies[enemyIndex];
+        this.spawnEnemy(
+          enemyType.type,
+          enemyType.health,
+          enemyType.speed,
+          enemyType.goldValue,
+          enemyType.damageValue
+        );
         
-        const timerIndex = this.delayTimers.indexOf(timer);
-        if (timerIndex !== -1) {
-          this.delayTimers.splice(timerIndex, 1);
-        }
-      }, delay);
-      
-      this.delayTimers.push(timer);
-      delay += wave.interval; // Delay between each enemy
-    });
-
-    const finalTimer = setTimeout(() => {
-      this.isSpawning = false;
-      
-      const timerIndex = this.delayTimers.indexOf(finalTimer);
-      if (timerIndex !== -1) {
-        this.delayTimers.splice(timerIndex, 1);
+        enemyIndex++;
+        lastSpawnTime = now;
       }
-    }, delay);
+      
+      const checkInterval = Math.max(16, Math.min(wave.interval / 4, 100));
+      const timer = setTimeout(spawnNextRandom, checkInterval);
+      this.delayTimers.push(timer);
+    };
     
-    this.delayTimers.push(finalTimer);
-    this.currentWave++;
+    spawnNextRandom();
   }
 
   generateWave(waveNumber) {

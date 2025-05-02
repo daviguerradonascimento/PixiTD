@@ -219,7 +219,16 @@ export default function usePixiManager(
       waveManagerRef.current = waveManager;
 
       app.ticker.add(() => {
-        if (isPausedRef.current || gameStateRef.current === "gameover") return;
+        if (isPausedRef.current || gameStateRef.current === "gameover") {
+          if (waveManagerRef.current) {
+            waveManagerRef.current.setPaused(true);
+          }
+          return;
+        }
+
+        if (waveManagerRef.current) {
+          waveManagerRef.current.setPaused(false);
+        }
 
         if (gameStateRef.current === "wave" && waveManagerRef.current) {
           waveManagerRef.current.update(app.ticker.speed);
