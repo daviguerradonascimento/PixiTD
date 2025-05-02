@@ -1,4 +1,4 @@
-import { Enemy } from "./Enemy.jsx";
+import { Enemy, enemyBaseStats } from "./Enemy.jsx";
 
 export class WaveManager {
   constructor(app , onEnemySpawned, onEnemyKilled, onEnemyReachedBase, waypoints = null) {
@@ -132,31 +132,30 @@ export class WaveManager {
 
   getRandomEnemyType(waveNumber) {
     const randomValue = Math.random();
-    let type = "basic";
-    let health = 100;
-    let speed = 1;
-    let goldValue = 10;
-    let damageValue = 1;
+    let selectedType = "basic";
 
-    if (randomValue < 0.3) {
-      type = "fast";
-      health = 50 + waveNumber * 5;
-      speed = 1.5 + waveNumber * 0.05;
-      goldValue = 15;
-      damageValue = 0.5;
-    } else if (randomValue < 0.6) {
-      type = "tank";
-      health = 200 + waveNumber * 10;
-      speed = 0.5 + waveNumber * 0.02;
-      goldValue = 20;
-      damageValue = 2;
+    if (randomValue < 0.3 && waveNumber > 1) { // Introduce fast enemies after wave 1
+      selectedType = "fast";
+    } else if (randomValue < 0.6 && waveNumber > 2) { // Introduce tank enemies after wave 2
+      selectedType = "tank";
     } else {
-      health = 100 + waveNumber * 8;
-      speed = 0.8 + waveNumber * 0.03;
-      goldValue = 10;
-      damageValue = 1;
+      selectedType = "basic";
     }
 
-    return { type: type, health: health, speed: speed, goldValue: goldValue, damageValue: damageValue };
+    const baseStats = enemyBaseStats[selectedType];
+
+    // Apply scaling based on wave number
+    const health = Math.round(baseStats.baseHealth + waveNumber * (baseStats.baseHealth * 0.1)); // +10% base health per wave
+    const speed = baseStats.baseSpeed; 
+    const damageValue = baseStats.baseDamage + waveNumber * (baseStats.baseDamage * 0.05); // +5% base damage per wave
+    const goldValue = baseStats.goldValue; // Keep gold value constant or scale differently if needed
+
+    return {
+      type: selectedType,
+      health: health,
+      speed: speed,
+      goldValue: goldValue,
+      damageValue: damageValue
+    };
   }
 }

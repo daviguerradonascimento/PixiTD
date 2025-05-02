@@ -29,6 +29,10 @@ import {
   sellTower as sellTowerLogic,
 } from "./towerUtils.js";
 
+// --- Import your music files ---
+import buildMusicSrc from "../../sprites/chill.mp3"; // Replace with your actual path
+import waveMusicSrc from "../../sprites/battle.mp3"; // Replace with your actual path
+
 const DEFAULT_COLS = 10;
 const DEFAULT_ROWS = 6;
 const REFUND_PERCENTAGE = 0.7;
@@ -72,6 +76,10 @@ export default function TowerDefenseGame({ gameMode }) {
   const placedTowersRef = useRef(placedTowers);
   const selectedTowerRef = useRef(selectedTower);
   const selectedTowerTypeRef = useRef(selectedTowerType);
+
+  // --- Audio Refs ---
+  const buildMusicRef = useRef(null);
+  const waveMusicRef = useRef(null);
 
   // Mini path preview size
   const miniWidth = 180;
@@ -224,6 +232,61 @@ export default function TowerDefenseGame({ gameMode }) {
       setGameState("gameover");
     }
   }, [baseHealth, gameState]);
+
+  // --- Initialize Audio Objects ---
+  useEffect(() => {
+    buildMusicRef.current = new Audio(buildMusicSrc);
+    buildMusicRef.current.loop = true;
+    buildMusicRef.current.volume = 0.3; // Adjust volume as needed
+
+    waveMusicRef.current = new Audio(waveMusicSrc);
+    waveMusicRef.current.loop = true;
+    waveMusicRef.current.volume = 0.4; // Adjust volume as needed
+
+    // Cleanup function to pause music when component unmounts
+    return () => {
+      buildMusicRef.current?.pause();
+      waveMusicRef.current?.pause();
+    };
+  }, []); // Run only once on mount
+
+  // --- Control Music Based on Game State ---
+  useEffect(() => {
+    const playAudio = async (audioElement) => {
+      if (audioElement && audioElement.paused) {
+        try {
+          await audioElement.play();
+        } catch (error) {
+          console.error("Audio play failed:", error);
+          // Browsers often require user interaction before playing audio.
+          // Consider adding a 'click to enable sound' button if needed.
+        }
+      }
+    };
+
+    const pauseAudio = (audioElement) => {
+      if (audioElement && !audioElement.paused) {
+        audioElement.pause();
+        audioElement.currentTime = 0; // Reset time if desired
+      }
+    };
+
+    if (gameState === "build") {
+      pauseAudio(waveMusicRef.current);
+      playAudio(buildMusicRef.current);
+    } else if (gameState === "wave") {
+      pauseAudio(buildMusicRef.current);
+      playAudio(waveMusicRef.current);
+    } else {
+      // Pause both if game over or paused (optional)
+      pauseAudio(buildMusicRef.current);
+      pauseAudio(waveMusicRef.current);
+    }
+
+    // Update gameStateRef
+    gameStateRef.current = gameState;
+
+  }, [gameState]); // Re-run when gameState changes
 
   const initializeGame = useCallback(() => {
     if (!pixiContainerRef.current || appRef.current) return;

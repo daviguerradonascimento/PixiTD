@@ -2,6 +2,12 @@ import * as PIXI from "pixi.js";
 
 import { GRID_COLS, GRID_ROWS, GRID_SIZE, TILE_HEIGHT, TILE_WIDTH } from "./gridUtils.js";
 
+export const enemyBaseStats = {
+  basic: { baseHealth: 100, baseSpeed: 0.5, baseDamage: 1, goldValue: 10 },
+  fast:  { baseHealth: 50,  baseSpeed: 1.0, baseDamage: 0.5, goldValue: 5 },
+  tank:  { baseHealth: 200, baseSpeed: 0.25, baseDamage: 2, goldValue: 15 },
+};
+
 const offsetX = ((GRID_COLS + GRID_ROWS) * (GRID_SIZE / 2)) / 2;
 
 function toIsometric(col, row) {
@@ -34,28 +40,19 @@ export class Enemy extends PIXI.Container {
 
     this.waypoints = waypointsa;
     this.type = type;
-    this.speed = 0.5;
-    this.maxHp = 100;
-    this.hp = 100;
-    this.goldValue = 10;
-    this.damageValue = 1;
+    
+    // Get stats from the unified base stats object
+    const stats = enemyBaseStats[type] || enemyBaseStats.basic;
+    this.speed = stats.baseSpeed;
+    this.maxHp = stats.baseHealth;
+    this.hp = stats.baseHealth;
+    this.goldValue = stats.goldValue;
+    this.damageValue = stats.baseDamage;
 
- 
     let texture;
-    // Color/tint by type
     if (type === "fast") {
       texture = PIXI.Texture.from("fast_enemy");
-      this.speed = 1;
-      this.maxHp = 50;
-      this.hp = 50;
-      this.goldValue = 5;
-      this.damageValue = 0.5;
     } else if (type === "tank") {
-      this.speed = 0.25;
-      this.maxHp = 200;
-      this.hp = 200;
-      this.goldValue = 15;
-      this.damageValue = 2;
       texture = PIXI.Texture.from("tank");
     } else {
       texture = PIXI.Texture.from("enemy");
@@ -93,10 +90,10 @@ export class Enemy extends PIXI.Container {
     const dy = target.y - this.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
 
-    // --- Walking animation: bob up and down ---
     this.walkAnimCounter += 0.18 * this.speed * gameSpeed;
     this.sprite.y = Math.sin(this.walkAnimCounter) * 3;
     this.sprite.rotation = Math.sin(this.walkAnimCounter) * 0.08;
+    
     if (dist < (this.speed * gameSpeed)) {
       this.x = target.x;
       this.y = target.y;
