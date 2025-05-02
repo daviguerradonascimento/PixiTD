@@ -1,6 +1,13 @@
 import * as PIXI from "pixi.js";
-
 import { GRID_COLS, GRID_ROWS, GRID_SIZE, TILE_HEIGHT, TILE_WIDTH } from "./gridUtils.js";
+
+// Import sound files
+import hitSoundSrc from "../../sprites/impact.mp3";
+import deathSoundSrc from "../../sprites/death.mp3";
+
+// Create audio objects (load once, play many times)
+const hitSound = new Audio(hitSoundSrc);
+const deathSound = new Audio(deathSoundSrc);
 
 export const enemyBaseStats = {
   basic: { baseHealth: 100, baseSpeed: 0.5, baseDamage: 1, goldValue: 10 },
@@ -94,7 +101,16 @@ export class Enemy extends PIXI.Container {
     this.sprite.y = Math.sin(this.walkAnimCounter) * 3;
     this.sprite.rotation = Math.sin(this.walkAnimCounter) * 0.08;
     
-    if (dist < (this.speed * gameSpeed)) {
+    let pathFactor = 1;
+    if (this.waypoints && this.waypoints.length > 3) {
+      const pathLength = this.waypoints.length;
+      const referenceLength = 7;
+      pathFactor = Math.min(Math.max(referenceLength / pathLength, 0.5), 1.5);
+    }
+    
+    const adjustedSpeed = this.speed * gameSpeed * pathFactor;
+    
+    if (dist < adjustedSpeed) {
       this.x = target.x;
       this.y = target.y;
       this.waypointIndex++;
@@ -104,8 +120,8 @@ export class Enemy extends PIXI.Container {
         return;
       }
     } else {
-      this.x += (dx / dist) * (this.speed * gameSpeed);
-      this.y += (dy / dist) * (this.speed * gameSpeed);
+      this.x += (dx / dist) * adjustedSpeed;
+      this.y += (dy / dist) * adjustedSpeed;
     }
 
     this.updateHpBar();
@@ -113,9 +129,21 @@ export class Enemy extends PIXI.Container {
 
   takeDamage(amount) {
     this.hp -= amount;
+    
+    // Play hit sound - create a new instance to allow overlapping sounds
+    const hitSoundInstance = hitSound.cloneNode();
+    hitSoundInstance.volume = 0.3; // Adjust volume as needed
+    hitSoundInstance.play().catch(e => console.warn("Could not play hit sound:", e));
+    
     this.flashHit();
     this.updateHpBar();
+    
     if (this.hp <= 0) {
+      // Play death sound
+      const deathSoundInstance = deathSound.cloneNode();
+      deathSoundInstance.volume = 0.5; // Adjust volume as needed
+      deathSoundInstance.play().catch(e => console.warn("Could not play death sound:", e));
+      
       if (this.parent) {
         this.spawnDeathParticles(this.parent, this.x, this.y, this.type === "tank" ? 0x9966ff : this.type === "fast" ? 0x33ccff : 0xff3333);
       }

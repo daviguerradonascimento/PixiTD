@@ -30,7 +30,7 @@ module.exports = {
         }
       },
       {
-        test: /\.(png|mp3|jpe?g)$/i,
+        test: /\.(png|mp3|jpe?g|ogg)$/i,
         use: "file-loader"
       }
     ]
