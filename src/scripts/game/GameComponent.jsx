@@ -46,7 +46,7 @@ const towerData = [
   { type: "splash", img: splashImage, name: "Splash", price: Tower.prototype.baseStats.splash.buildCost },
 ];
 
-export default function TowerDefenseGame({ gameMode }) {
+export default function TowerDefenseGame({ gameMode, layoutConfig = null }) {
   // --- States ---
   const [selectedTowerType, setSelectedTowerType] = useState("basic");
   const [selectedTower, setSelectedTower] = useState(null);
@@ -97,11 +97,15 @@ export default function TowerDefenseGame({ gameMode }) {
     if (gameMode === "infinity") {
       setCols(Math.floor(Math.random() * 10) + 10);
       setRows(Math.floor(Math.random() * 8) + 8);
+    } else if (layoutConfig) {
+      // Use the selected layout's grid dimensions
+      setCols(layoutConfig.cols || DEFAULT_COLS);
+      setRows(layoutConfig.rows || DEFAULT_ROWS);
     } else {
       setCols(DEFAULT_COLS);
       setRows(DEFAULT_ROWS);
     }
-  }, [gameMode]);
+  }, [gameMode, layoutConfig]);
 
   useEffect(() => {
     if (baseHealth <= 0 && gameState !== "gameover") {
@@ -200,6 +204,24 @@ export default function TowerDefenseGame({ gameMode }) {
 
         initialWaypoints = newWaypoints;
         initialGridWaypoints = newGridWaypoints;
+      } else if (layoutConfig && layoutConfig.waypoints) {
+        // Use custom waypoints from the selected layout
+        const customGridWaypoints = layoutConfig.waypoints;
+        setGridWaypoints(customGridWaypoints);
+        
+        // Convert grid waypoints to screen coordinates
+        const offsetX = ((cols + rows) * (gridConsts.TILE_WIDTH / 2)) / 2;
+        const customWaypoints = customGridWaypoints.map(([col, row]) => {
+          const { x, y } = toIsometric(col, row);
+          return {
+            x: x + offsetX + (gridConsts.TILE_HEIGHT / 2),
+            y: y + (gridConsts.TILE_HEIGHT / 4)
+          };
+        });
+        
+        setWaypoints(customWaypoints);
+        initialWaypoints = customWaypoints;
+        initialGridWaypoints = customGridWaypoints;
       } else {
         setGrid([]);
         setWaypoints([]);
@@ -239,7 +261,8 @@ export default function TowerDefenseGame({ gameMode }) {
         () => {},
         (enemy) => setGold((prev) => prev + (enemy.goldValue || 10)),
         (enemy) => setBaseHealth((prev) => Math.max(0, prev - enemy.damageValue)),
-        initialWaypoints
+        initialWaypoints,
+        { cols, rows, gameMode } // Pass extra options including grid dimensions
       );
       waveManagerRef.current = waveManager;
 
@@ -264,7 +287,7 @@ export default function TowerDefenseGame({ gameMode }) {
         stage.children.sort((a, b) => a.y - b.y);
       });
     });
-  }, [cols, rows, gameMode]);
+  }, [cols, rows, gameMode, layoutConfig]);
 
   const sellTower = () =>
     sellTowerLogic({

@@ -1,7 +1,7 @@
 import { Enemy, enemyBaseStats } from "./Enemy.jsx";
 
 export class WaveManager {
-  constructor(app , onEnemySpawned, onEnemyKilled, onEnemyReachedBase, waypoints = null) {
+  constructor(app, onEnemySpawned, onEnemyKilled, onEnemyReachedBase, customWaypoints = null, options = {}) {
     this.app = app;
     this.onEnemySpawned = onEnemySpawned;
     this.onEnemyKilled = onEnemyKilled;
@@ -9,7 +9,10 @@ export class WaveManager {
     this.currentWave = 0;
     this.activeEnemies = [];
     this.isSpawning = false;
-    this.waypoints = waypoints || [];
+    
+    // Store custom waypoints if provided
+    this.waypoints = customWaypoints || waypoints;
+    this.options = options;
     
     this.waves = [
       { enemies: ["basic", "basic", "basic"], interval: 1000 },
@@ -36,19 +39,16 @@ export class WaveManager {
       }
 
       const enemyType = wave.enemies[i];
-      const enemy = new Enemy(enemyType);
-      enemy.onDeath = () => {
-        this.onEnemyKilled(enemy);
-        this.removeEnemy(enemy);
-      };
-      enemy.onReachedBase = () => {
-        this.onEnemyReachedBase(enemy);
-        this.removeEnemy(enemy);
-      };
-
-      this.activeEnemies.push(enemy);
-      this.app.stage.addChild(enemy);
-      this.onEnemySpawned?.(enemy);
+      // Use our spawnEnemy method that uses this.waypoints
+      const baseStats = enemyBaseStats[enemyType];
+      this.spawnEnemy(
+        enemyType,
+        baseStats.baseHealth,
+        baseStats.baseSpeed,
+        baseStats.goldValue,
+        baseStats.baseDamage
+      );
+      
       i++;
     }, wave.interval);
   }
@@ -103,27 +103,30 @@ export class WaveManager {
   }
 
   spawnEnemy(type, health, speed, goldValue, damageValue) {
-    const enemy = new Enemy( type, () => {
-      this.enemies = this.enemies.filter((e) => e !== enemy);
-      this.onEnemyDeath(enemy);
-    }, this.onEnemyReachedBase, this.waypoints);
+    // Create enemy with the stored waypoints
+    const enemy = new Enemy(
+      type, 
+      () => {
+        this.onEnemyKilled(enemy);
+        this.removeEnemy(enemy);
+      }, 
+      (e) => {
+        this.onEnemyReachedBase(e);
+        this.removeEnemy(e);
+      },
+      this.waypoints // Use the stored waypoints
+    );
+    
+    // Rest of the method remains the same
     enemy.speed = speed;
     enemy.maxHp = health;
     enemy.hp = health;
     enemy.goldValue = goldValue;
     enemy.damageValue = damageValue;
     enemy.zIndex = 4;
-    enemy.onDeath = () => {
-        this.onEnemyKilled(enemy);
-        this.removeEnemy(enemy);
-      };
-      enemy.onReachedBase = () => {
-        this.onEnemyReachedBase(enemy);
-        this.removeEnemy(enemy);
-      };
+    
     this.app.stage.addChild(enemy);
     this.activeEnemies.push(enemy);
-    // this.enemies.push(enemy);
   }
 
   getRandomEnemyType(waveNumber) {
