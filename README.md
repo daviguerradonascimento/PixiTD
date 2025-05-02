@@ -1,8 +1,9 @@
 # PixiTD - Tower Defense Game
 
-A browser-based tower defense game built with PixiJS and React. PixiTD features both traditional and procedurally generated levels, multiple tower types, and responsive gameplay.
-
 ![PixiTD Game Screenshot](image.png)
+
+## Project Overview:
+A browser-based tower defense game built with PixiJS and React. PixiTD features both traditional and procedurally generated levels, multiple tower types, and responsive gameplay.
 
 ## Features
 
