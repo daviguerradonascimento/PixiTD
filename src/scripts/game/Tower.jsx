@@ -15,12 +15,7 @@ export class Tower extends PIXI.Container {
     this.range = new PIXI.Graphics();
     this.addChild(this.range);
 
-    this.baseStats = {
-      basic:   { damage: 5, color: 0x3399ff, range: 100, cooldown: 60, upgradeCost: 50, buildCost: 50, targetStrategy: "first" },
-      sniper:  { damage: 7, color: 0xffcc00, range: 200, cooldown: 120, upgradeCost: 80, buildCost: 75, targetStrategy: "strongest" },
-      rapid:   { damage: 3, color: 0xffb300, range: 80, cooldown: 20, upgradeCost: 60, buildCost: 60, targetStrategy: "closest" },
-      splash:  { damage: 2, color: 0xff3333, range: 100, cooldown: 80, upgradeCost: 70, buildCost: 70, targetStrategy: "first" },
-    }[type];
+    this.baseStats = Tower.prototype.baseStats[type];
 
     this.projectileContainer = projectileContainer;
     this.fireTimer = 0;

@@ -10,7 +10,7 @@ export class Projectile extends PIXI.Graphics {
 
     this.target = target;
     this.damage = damage;
-    this.speed = 1.8;
+    this.speed = 2;
 
     this.drawShape();
   }

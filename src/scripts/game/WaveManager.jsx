@@ -74,11 +74,7 @@ export class WaveManager {
   }
 
   spawnRandomWave(waveIndex) {
-    if (waveIndex >= 20) {
-      this.isSpawning = false;
-      return; // All waves spawned
-    }
-
+    this.isSpawning = true;
     const wave = this.generateWave(waveIndex);
     let delay = 0;
     wave.enemies.forEach((enemyType) => {
