@@ -46,7 +46,7 @@ const towerData = [
   { type: "splash", img: splashImage, name: "Splash", price: Tower.prototype.baseStats.splash.buildCost },
 ];
 
-export default function TowerDefenseGame({ gameMode, layoutConfig = null }) {
+export default function TowerDefenseGame({ gameMode, layoutConfig = null, onReturnToMenu }) {
   // --- States ---
   const [selectedTowerType, setSelectedTowerType] = useState("basic");
   const [selectedTower, setSelectedTower] = useState(null);
@@ -130,27 +130,65 @@ export default function TowerDefenseGame({ gameMode, layoutConfig = null }) {
     };
   }, []); // Run only once on mount
 
+  useEffect(() => {
+    // Only start music when app is initialized
+    if (appRef.current && buildMusicRef.current) {
+      // Small delay to ensure initialization is complete
+      const timer = setTimeout(() => {
+        try {
+          buildMusicRef.current.volume = 0.3;
+          buildMusicRef.current.play().catch(err => {
+            // Handle autoplay restrictions
+            if (err.name !== "AbortError") {
+              console.warn("Initial music autoplay failed:", err);
+            }
+          });
+        } catch (err) {
+          console.warn("Error playing initial music:", err);
+        }
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [appRef.current]);
+
   // --- Control Music Based on Game State ---
   useEffect(() => {
+    // Flag to track if component is mounted
+    let isMounted = true;
+    
     const playAudio = async (audioElement) => {
-      if (audioElement && audioElement.paused) {
-        try {
-          await audioElement.play();
-        } catch (error) {
-          console.error("Audio play failed:", error);
-          // Browsers often require user interaction before playing audio.
-          // Consider adding a 'click to enable sound' button if needed.
+      if (!audioElement || !audioElement.paused) return;
+      
+      try {
+        // Only play if element exists and is paused
+        const playPromise = audioElement.play();
+        
+        // Modern browsers return a promise from play()
+        if (playPromise !== undefined) {
+          await playPromise;
+          // Only adjust volume if still mounted
+          if (isMounted) {
+            audioElement.volume = audioElement === buildMusicRef.current ? 0.3 : 0.4;
+          }
+        }
+      } catch (error) {
+        // Ignore AbortError as it's expected during quick state changes
+        if (error.name !== "AbortError") {
+          console.warn("Audio play failed:", error);
         }
       }
     };
-
+  
     const pauseAudio = (audioElement) => {
-      if (audioElement && !audioElement.paused) {
-        audioElement.pause();
-        audioElement.currentTime = 0; // Reset time if desired
-      }
+      if (!audioElement || audioElement.paused) return;
+      
+      // Reset time only after ensuring the element exists and is playing
+      audioElement.pause();
+      audioElement.currentTime = 0;
     };
-
+  
+    // Handle audio based on game state
     if (gameState === "build") {
       pauseAudio(waveMusicRef.current);
       playAudio(buildMusicRef.current);
@@ -158,15 +196,23 @@ export default function TowerDefenseGame({ gameMode, layoutConfig = null }) {
       pauseAudio(buildMusicRef.current);
       playAudio(waveMusicRef.current);
     } else {
-      // Pause both if game over or paused (optional)
+      // Pause both if game over or paused
       pauseAudio(buildMusicRef.current);
       pauseAudio(waveMusicRef.current);
     }
-
+  
     // Update gameStateRef
     gameStateRef.current = gameState;
-
-  }, [gameState]); // Re-run when gameState changes
+  
+    // Return a proper cleanup function
+    return () => {
+      isMounted = false;
+      
+      // Try to cancel any playing audio to avoid errors
+      buildMusicRef.current?.pause();
+      waveMusicRef.current?.pause();
+    };
+  }, [gameState]);
 
   const initializeGame = useCallback(() => {
     if (!pixiContainerRef.current || appRef.current) return;
@@ -242,19 +288,35 @@ export default function TowerDefenseGame({ gameMode, layoutConfig = null }) {
 
       const resizeGame = () => {
         const container = pixiContainerRef.current;
+        const app = appRef.current;
+        
+        // Add thorough null checks
+        if (!container || !app || !app.renderer || !app.stage) {
+          return;
+        }
+        
         const containerWidth = container.offsetWidth;
         const containerHeight = container.offsetHeight;
-        app.renderer.resize(containerWidth, containerHeight);
-        const totalGridWidth = (cols + rows) * (gridConsts.TILE_WIDTH / 2);
-        const totalGridHeight = (cols + rows) * (gridConsts.TILE_HEIGHT / 2);
-        const scale = Math.min(containerWidth / totalGridWidth, containerHeight / totalGridHeight);
-        stage.scale.set(scale);
-        stage.x = (containerWidth - totalGridWidth * scale) / 2;
-        stage.y = (containerHeight - totalGridHeight * scale) / 2;
+        
+        try {
+          // Resize renderer with error handling
+          app.renderer.resize(containerWidth, containerHeight);
+          
+          const totalGridWidth = (cols + rows) * (gridConsts.TILE_WIDTH / 2);
+          const totalGridHeight = (cols + rows) * (gridConsts.TILE_HEIGHT / 2);
+          const scale = Math.min(containerWidth / totalGridWidth, containerHeight / totalGridHeight);
+          
+          app.stage.scale.set(scale);
+          app.stage.x = (containerWidth - totalGridWidth * scale) / 2;
+          app.stage.y = (containerHeight - totalGridHeight * scale) / 2;
+        } catch (err) {
+          console.warn("Error during resize operation:", err);
+        }
       };
 
       resizeGame();
-      window.addEventListener("resize", resizeGame);
+      const resizeHandler = () => resizeGame();
+      window.addEventListener("resize", resizeHandler);
 
       const waveManager = new WaveManager(
         app,
@@ -288,6 +350,79 @@ export default function TowerDefenseGame({ gameMode, layoutConfig = null }) {
       });
     });
   }, [cols, rows, gameMode, layoutConfig]);
+
+  const cleanupResources = () => {
+    // Stop music
+    buildMusicRef.current?.pause();
+    waveMusicRef.current?.pause();
+
+    if (waveManagerRef.current) {
+      waveManagerRef.current.cleanup();
+    }
+    
+    // Clear all references to game objects
+    setSelectedTower(null);
+    setPlacedTowers([]);
+    // waveManagerRef.current = null;
+  
+    // Reset all game state
+    setGrid([]);
+    setWaypoints([]);
+    setGridWaypoints([]);
+    
+    // Destroy PIXI app with thorough cleanup
+    if (appRef.current) {
+      try {
+        // Stop the ticker to prevent further updates
+        appRef.current.ticker?.stop();
+        
+        // Remove all children from the stage
+        if (appRef.current.stage) {
+          appRef.current.stage.removeChildren();
+        }
+        
+        // Remove the canvas from DOM
+        if (appRef.current.canvas && appRef.current.canvas.parentNode) {
+          appRef.current.canvas.parentNode.removeChild(appRef.current.canvas);
+        }
+        
+        // Destroy all textures and resources
+        for (const resource in appRef.current.renderer?.textureSystem?.managedTextures || {}) {
+          resource?.destroy?.(true);
+        }
+        
+        // Finally destroy the app
+        appRef.current.destroy({
+          children: true,
+          texture: true,
+          baseTexture: true
+        });
+      } catch (err) {
+        console.warn("Error during PIXI cleanup:", err);
+      } finally {
+        // Ensure reference is cleared even if destroy fails
+        appRef.current = null;
+      }
+    }
+    
+    // Clear the container
+    if (pixiContainerRef.current) {
+      // window.removeEventListener("resize", resizeHandler);
+      pixiContainerRef.current.innerHTML = '';
+    }
+  };
+
+  useEffect(() => {
+    if (gameMode && pixiContainerRef.current) {
+      console.log("Game mode changed, reinitializing:", gameMode);
+      // Force cleanup and reinitialization
+      cleanupResources();
+      // Short timeout to ensure DOM updates before reinitialization
+      setTimeout(() => {
+        initializeGame();
+      }, 50);
+    }
+  }, [gameMode, initializeGame]);
 
   const sellTower = () =>
     sellTowerLogic({
@@ -417,31 +552,59 @@ export default function TowerDefenseGame({ gameMode, layoutConfig = null }) {
     <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
       {/* Drag & Drop Tower Palette */}
       <div style={{ position: "absolute", top: 10, left: 10, zIndex: 20, display: "flex", gap: 8, flexDirection: 'column' }}>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: "center" }}>
           <GameControlButton text="Start Wave" onClick={startWave} disabled={gameState === "wave" || gameState === "gameover"} />
           <GameControlButton
             text={`Speed: ${gameSpeed}x`}
             onClick={() => setGameSpeed(gameSpeed === 1 ? 2 : 1)}
           />
           <GameControlButton text={isPaused ? "Resume" : "Pause"} onClick={() =>{togglePause(); isPausedRef.current = !isPausedRef.current}} />
+          
+          {/* Add the new return to menu button */}
+          <button
+            style={{
+              padding: "6px 16px",
+              background: "#D81F26", // Red color for caution action
+              color: "#fff",
+              border: "2px solid #AB0F15", // Darker red border
+              borderRadius: "8px",
+              fontWeight: "bold",
+              fontSize: "1.08em",
+              marginLeft: "16px", // Extra margin to separate from other buttons
+              cursor: "pointer",
+              boxShadow: "0 2px 8px #0004",
+              display: "flex",
+              alignItems: "center"
+            }}
+            onClick={() => {
+              cleanupResources();
+              onReturnToMenu();
+            }}
+          >
+            <span style={{ marginRight: "4px" }}>◀</span> Menu
+          </button>
         </div>
-        <div style={{display: "flex",flexDirection: "row", flexWrap: "wrap",gap: "2vw", justifyContent: "center",}}>
-        {towerData.map(({ type, img, name, price }) => (
-          <TowerTypeButton
-            key={type}
-            type={type}
-            img={img}
-            name={name}
-            price={price}
-            isSelected={draggingTowerType === type}
-            onMouseDown={() => handleDragStart(type)}
-            onMouseUp={handleDragEnd}
-            disabled={gameState === "wave" || gameState === "gameover"}
-          />
-        ))}
+        
+        {/* Existing tower buttons */}
+        <div style={{display: "flex", flexDirection: "row", flexWrap: "wrap", gap: "2vw", justifyContent: "center",}}>
+          {towerData.map(({ type, img, name, price }) => (
+            <TowerTypeButton
+              key={type}
+              type={type}
+              img={img}
+              name={name}
+              price={price}
+              isSelected={draggingTowerType === type}
+              onMouseDown={() => handleDragStart(type)}
+              onMouseUp={handleDragEnd}
+              disabled={gameState === "wave" || gameState === "gameover"}
+            />
+          ))}
         </div>
-        </div>
-        {gameState === "gameover" && (
+      </div>
+      
+      {/* Game over dialog - add a return button here too */}
+      {gameState === "gameover" && (
         <div
           style={{
             position: "absolute",
@@ -467,13 +630,32 @@ export default function TowerDefenseGame({ gameMode, layoutConfig = null }) {
           <div style={{ fontWeight: "bold", color: baseHealth <= 0 ? "#ff4d4f" : "#66ff99", marginBottom: 16 }}>
             {baseHealth <= 0 ? "Game Over" : "Victory!"}
           </div>
-          <div style={{ fontSize: "1.1em", color: "#ffe066" }}>
+          <div style={{ fontSize: "1.1em", color: "#ffe066", marginBottom: "20px" }}>
             {baseHealth <= 0
               ? "You lost. Try again!"
               : "Congratulations! You won!"}
           </div>
+          <button
+            style={{
+              padding: "10px 20px",
+              fontSize: "0.8em",
+              cursor: "pointer",
+              borderRadius: "8px",
+              border: "2px solid #66ccff",
+              background: "#181c24",
+              color: "#fff",
+              fontWeight: "bold",
+            }}
+            onClick={() => {
+              cleanupResources();
+              onReturnToMenu();
+            }}
+          >
+            Return to Menu
+          </button>
         </div>
       )}
+      
       {/* Ghost Tower Visual Feedback */}
       {draggingTowerType && ghostPos && (
         <img

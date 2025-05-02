@@ -14,6 +14,9 @@ export class WaveManager {
     this.waypoints = customWaypoints || waypoints;
     this.options = options;
     
+    this.spawnTimers = [];
+    this.delayTimers = [];
+    
     this.waves = [
       { enemies: ["basic", "basic", "basic"], interval: 1000 },
       { enemies: ["fast", "fast", "basic"], interval: 900 },
@@ -31,8 +34,21 @@ export class WaveManager {
     this.isSpawning = true;
     let i = 0;
     const timer = setInterval(() => {
+      if (!this.app || !this.app.stage) {
+        clearInterval(timer);
+        const timerIndex = this.spawnTimers.indexOf(timer);
+        if (timerIndex !== -1) {
+          this.spawnTimers.splice(timerIndex, 1);
+        }
+        return;
+      }
+      
       if (i >= wave.enemies.length) {
         clearInterval(timer);
+        const timerIndex = this.spawnTimers.indexOf(timer);
+        if (timerIndex !== -1) {
+          this.spawnTimers.splice(timerIndex, 1);
+        }
         this.currentWave++;
         this.isSpawning = false;
         return;
@@ -51,6 +67,8 @@ export class WaveManager {
       
       i++;
     }, wave.interval);
+    
+    this.spawnTimers.push(timer);
   }
 
   update(gameSpeed, gameMode) {
@@ -77,16 +95,40 @@ export class WaveManager {
     this.isSpawning = true;
     const wave = this.generateWave(waveIndex);
     let delay = 0;
+    
     wave.enemies.forEach((enemyType) => {
-      setTimeout(() => {
+      const timer = setTimeout(() => {
+        // First check if app still exists
+        if (!this.app || !this.app.stage) {
+          const timerIndex = this.delayTimers.indexOf(timer);
+          if (timerIndex !== -1) {
+            this.delayTimers.splice(timerIndex, 1);
+          }
+          return;
+        }
+        
         this.spawnEnemy(enemyType.type, enemyType.health, enemyType.speed, enemyType.goldValue, enemyType.damageValue);
+        
+        const timerIndex = this.delayTimers.indexOf(timer);
+        if (timerIndex !== -1) {
+          this.delayTimers.splice(timerIndex, 1);
+        }
       }, delay);
+      
+      this.delayTimers.push(timer);
       delay += wave.interval; // Delay between each enemy
     });
 
-    setTimeout(() => {
+    const finalTimer = setTimeout(() => {
       this.isSpawning = false;
+      
+      const timerIndex = this.delayTimers.indexOf(finalTimer);
+      if (timerIndex !== -1) {
+        this.delayTimers.splice(timerIndex, 1);
+      }
     }, delay);
+    
+    this.delayTimers.push(finalTimer);
     this.currentWave++;
   }
 
@@ -103,6 +145,10 @@ export class WaveManager {
   }
 
   spawnEnemy(type, health, speed, goldValue, damageValue) {
+    if (!this.app || !this.app.stage) {
+      return;
+    }
+    
     // Create enemy with the stored waypoints
     const enemy = new Enemy(
       type, 
@@ -156,5 +202,26 @@ export class WaveManager {
       goldValue: goldValue,
       damageValue: damageValue
     };
+  }
+
+  cleanup() {
+    // Clear all spawn interval timers
+    this.spawnTimers.forEach(timer => clearInterval(timer));
+    this.spawnTimers = [];
+    
+    // Clear all setTimeout timers
+    this.delayTimers.forEach(timer => clearTimeout(timer));
+    this.delayTimers = [];
+    
+    // Remove all active enemies
+    this.activeEnemies.forEach(enemy => {
+      if (enemy && enemy.parent) {
+        enemy.parent.removeChild(enemy);
+      }
+    });
+    this.activeEnemies = [];
+    
+    // Set spawning to false
+    this.isSpawning = false;
   }
 }

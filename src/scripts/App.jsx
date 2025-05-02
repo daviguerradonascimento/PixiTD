@@ -54,6 +54,11 @@ const App = () => {
   const [gameMode, setGameMode] = useState(null);
   const [selectedLayout, setSelectedLayout] = useState(null);
   const [assetsLoaded, setAssetsLoaded] = useState(false);
+  
+  const resetGame = () => {
+    setGameMode(null);
+    setSelectedLayout(null);
+  };
 
   useEffect(() => {
     // Preload all assets before showing the menu/game
@@ -328,8 +333,10 @@ const App = () => {
     // Either infinity mode or traditional-custom with a selected layout
     return (
       <TowerDefenseGame 
+        key={`game-${Date.now()}-${gameMode}-${selectedLayout?.id || 'default'}`}
         gameMode={gameMode === "traditional-custom" ? "traditional" : gameMode} 
         layoutConfig={gameMode === "traditional-custom" ? selectedLayout : null}
+        onReturnToMenu={resetGame}
       />
     );
   }
