@@ -40,10 +40,10 @@ export const waypoints = waypointGridCoords.map(([col, row]) => {
 });
 
 export class Enemy extends PIXI.Container {
-  constructor(type = "basic", onDeath = () => {}, onReachedBase = () => {}, waypointsa = waypoints) {
+  constructor(type = "basic", onDeath = () => {}, onReachedBase = () => {}, waypoints = this.waypoints) {
     super();
 
-    this.waypoints = waypointsa;
+    this.waypoints = waypoints;
     this.type = type;
     
     // Get stats from the unified base stats object

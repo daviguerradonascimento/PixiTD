@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { handlePlacement, sellTower as sellTowerLogic } from './towerUtils';
 import { screenToGrid } from './gridUtils';
 
@@ -14,36 +14,58 @@ export default function useTowerManager({
   gridWaypointsRef,
   placedTowersRef, setPlacedTowers,
   setGold, setSelectedTower, setTooltip,
-  selectedTowerRef
+  selectedTowerRef,
+  isPanningRef
 }) {
+  // Add a new state to track if we're currently dragging
+  const isDraggingRef = useRef(false);
+
   // Handle tower dragging
   const handleDragStart = (type) => {
     setDraggingTowerType(type);
     setGhostPos(null);
+    isDraggingRef.current = true;
   };
 
   const handleDragEnd = () => {
     setDraggingTowerType(null);
     setGhostPos(null);
+    isDraggingRef.current = false;
   };
 
-  // Mouse move handler for tower ghost position
+  // Mouse/touch move handler for tower ghost position
   useEffect(() => {
     if (!draggingTowerType || !pixiContainerRef.current) return;
 
-    const handleMouseMove = (e) => {
+    const handlePointerMove = (e) => {
+      e.preventDefault(); // Prevent scrolling during drag
+
       const rect = pixiContainerRef.current.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
+      // Get position from either mouse or touch event
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      const mouseX = clientX - rect.left;
+      const mouseY = clientY - rect.top;
       setGhostPos({ x: mouseX, y: mouseY });
     };
 
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    // Add both mouse and touch event listeners
+    window.addEventListener("mousemove", handlePointerMove);
+    window.addEventListener("touchmove", handlePointerMove, { passive: false });
+
+    return () => {
+      window.removeEventListener("mousemove", handlePointerMove);
+      window.removeEventListener("touchmove", handlePointerMove);
+    };
   }, [draggingTowerType]);
 
-  // Convert mouse coordinates to stage coordinates
-  const getStageCoords = (mouseX, mouseY) => {
+  // Convert mouse/touch coordinates to stage coordinates
+  const getStageCoords = (clientX, clientY) => {
+    const rect = pixiContainerRef.current.getBoundingClientRect();
+    const mouseX = clientX - rect.left;
+    const mouseY = clientY - rect.top;
+
     const app = appRef.current;
     if (!app) return { x: mouseX, y: mouseY };
     const stage = app.stage;
@@ -53,16 +75,46 @@ export default function useTowerManager({
     return { x: stageX, y: stageY };
   };
 
-  // Handle tower placement
-  const handleCanvasDrop = (e) => {
+  // Handle tower placement for both mouse and touch
+  const handlePointerUp = useCallback((e) => {
     if (!draggingTowerType) return;
-    e.preventDefault();
-    const rect = pixiContainerRef.current.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-    const { x, y } = getStageCoords(mouseX, mouseY);
+
+    if (isPanningRef.current) {
+        handleDragEnd();
+        return;
+      }
+
+    console.log("Pointer up event received:", e.type);
+
+    // Don't immediately prevent default - we need the coordinates
+    let clientX, clientY;
+
+    // Handle different event types properly
+    if (e.type === "touchend" && e.changedTouches && e.changedTouches.length > 0) {
+      clientX = e.changedTouches[0].clientX;
+      clientY = e.changedTouches[0].clientY;
+      e.preventDefault(); // Stop further touch events
+    } else if (e.type === "mouseup") {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    } else {
+      // Fallback to ghost position if event coordinates aren't available
+      if (ghostPos) {
+        const rect = pixiContainerRef.current.getBoundingClientRect();
+        clientX = ghostPos.x + rect.left;
+        clientY = ghostPos.y + rect.top;
+      } else {
+        // If all fails, exit
+        handleDragEnd();
+        return;
+      }
+    }
+
+    const { x, y } = getStageCoords(clientX, clientY);
     const { col, row } = screenToGrid(x, y, cols, rows);
-    
+
+    console.log("Placing tower at grid:", col, row, "from coords:", x, y);
+
     handlePlacement({
       col,
       row,
@@ -81,21 +133,35 @@ export default function useTowerManager({
       rows,
       selectedTowerRef,
     });
-    
-    handleDragEnd();
-  };
 
-  // Add event listener for tower placement
+    handleDragEnd();
+  }, [draggingTowerType, ghostPos, cols, rows, isPanningRef]);
+
+  // Add event listeners for both mouse and touch events
   useEffect(() => {
     const canvas = pixiContainerRef.current;
     if (!canvas) return;
+
     if (draggingTowerType) {
-      canvas.addEventListener("mouseup", handleCanvasDrop);
+      // Use document to capture events that might happen outside the canvas
+      document.addEventListener("mouseup", handlePointerUp);
+      document.addEventListener("touchend", handlePointerUp, { passive: false });
+      document.addEventListener("touchcancel", handleDragEnd);
+
+      // Also handle direct events on the canvas
+      canvas.addEventListener("mouseup", handlePointerUp);
+      canvas.addEventListener("touchend", handlePointerUp, { passive: false });
     }
+
     return () => {
-      canvas.removeEventListener("mouseup", handleCanvasDrop);
+      document.removeEventListener("mouseup", handlePointerUp);
+      document.removeEventListener("touchend", handlePointerUp);
+      document.removeEventListener("touchcancel", handleDragEnd);
+
+      canvas.removeEventListener("mouseup", handlePointerUp);
+      canvas.removeEventListener("touchend", handlePointerUp);
     };
-  }, [draggingTowerType, handleCanvasDrop]);
+  }, [draggingTowerType, handlePointerUp]);
 
   // Tower actions
   const sellTower = () =>
@@ -119,7 +185,7 @@ export default function useTowerManager({
   return {
     handleDragStart,
     handleDragEnd,
-    handleCanvasDrop,
+    handlePointerUp,
     getStageCoords,
     sellTower,
     handleUpgrade

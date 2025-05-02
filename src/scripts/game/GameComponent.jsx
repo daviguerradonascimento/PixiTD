@@ -22,8 +22,6 @@ import useAudioManager from "./AudioManager";
 import usePixiManager from "./PixiManager";
 import useTowerManager from "./TowerManager";
 
-
-
 const towerData = [
   { type: "basic", img: basicImage, name: "Basic", price: Tower.prototype.baseStats.basic.buildCost },
   { type: "sniper", img: sniperImage, name: "Sniper", price: Tower.prototype.baseStats.sniper.buildCost },
@@ -77,7 +75,8 @@ export default function TowerDefenseGame({ gameMode, layoutConfig = null, onRetu
     setGold: gameState.setGold,
     setSelectedTower: gameState.setSelectedTower,
     setTooltip: gameState.setTooltip,
-    selectedTowerRef: gameState.selectedTowerRef
+    selectedTowerRef: gameState.selectedTowerRef,
+    isPanningRef: pixiManager.isPanningRef
   });
   
   // Initialize game and handle cleanup
@@ -283,7 +282,27 @@ export default function TowerDefenseGame({ gameMode, layoutConfig = null, onRetu
           stats={gameState.tooltip.stats} 
         />
       )}
-
+<button
+  style={{
+    position: "absolute",
+    bottom: "calc(280px + 30px)", // Position it above the MiniPathPreview (height + margin)
+    right: "20px",
+    zIndex: 50,
+    padding: "8px 16px",
+    background: "rgba(30, 30, 40, 0.8)",
+    color: "#66ccff",
+    border: "2px solid #66ccff",
+    borderRadius: "8px",
+    fontWeight: "bold",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px"
+  }}
+  onClick={pixiManager.resetGridPosition}
+>
+  <span style={{ fontSize: "1.2em" }}>⌖</span> Center Grid
+</button>
       <div ref={pixiManager.pixiContainerRef} style={{ width: "100%", height: "100%" }} />
     </div>
   );
