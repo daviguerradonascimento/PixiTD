@@ -1,8 +1,9 @@
 import * as PIXI from "pixi.js";
-import { GRID_COLS, GRID_ROWS, GRID_SIZE, TILE_HEIGHT, TILE_WIDTH } from "./gridUtils.js";
+import { GRID_COLS, GRID_ROWS, GRID_SIZE, TILE_HEIGHT, TILE_WIDTH } from "../utils/gridUtils.js";
 
-import hitSoundSrc from "../../sprites/impact.mp3";
-import deathSoundSrc from "../../sprites/death.mp3";
+// Update paths to audio files
+import hitSoundSrc from "../../assets/audio/impact.mp3";
+import deathSoundSrc from "../../assets/audio/death.mp3";
 
 const hitSound = new Audio(hitSoundSrc);
 const deathSound = new Audio(deathSoundSrc);

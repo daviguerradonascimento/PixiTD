@@ -1,6 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import GameComponent from "./game/GameComponent.jsx";
+import TowerDefenseGame from './components/GameComponent.jsx';
 import App from "./App.jsx";
 
 

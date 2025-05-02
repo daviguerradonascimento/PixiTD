@@ -1,6 +1,6 @@
 import * as PIXI from "pixi.js";
-import { Projectile, BasicProjectile, SplashProjectile, RapidProjectile, SniperProjectile } from "./Projectile.jsx";
-import { TILE_WIDTH, TILE_HEIGHT } from "./gridUtils.js";
+import { Projectile, BasicProjectile, SplashProjectile, RapidProjectile, SniperProjectile } from "./Projectile";
+import { gridConsts, TILE_WIDTH, TILE_HEIGHT } from "../utils/gridUtils";
 
 export class Tower extends PIXI.Container {
   constructor(x, y, projectileContainer, type = "basic") {

@@ -1,9 +1,9 @@
 import { useCallback, useRef } from 'react';
 import * as PIXI from 'pixi.js';
-import { drawIsometricGrid, toIsometric, gridConsts } from './gridUtils';
-import { ProceduralLevelGenerator } from './ProceduralLevelGenerator';
+import { drawIsometricGrid, toIsometric, gridConsts } from '../utils/gridUtils';
+import { ProceduralLevelGenerator } from '../utils/ProceduralLevelGenerator';
 import { WaveManager } from './WaveManager';
-import { waypointGridCoords } from './Enemy';
+import { waypointGridCoords } from '../entities/Enemy';
 
 export default function usePixiManager(
   gameState,

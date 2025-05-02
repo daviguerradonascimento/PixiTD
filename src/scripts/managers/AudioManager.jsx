@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
-import buildMusicSrc from "../../sprites/chill.mp3";
-import waveMusicSrc from "../../sprites/battle.mp3";
+// Update paths to audio files
+import buildMusicSrc from "../../assets/audio/chill.mp3";
+import waveMusicSrc from "../../assets/audio/battle.mp3";
 
 export default function useAudioManager(gameState, appRef) {
   const buildMusicRef = useRef(null);

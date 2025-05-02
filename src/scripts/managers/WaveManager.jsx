@@ -1,4 +1,4 @@
-import { Enemy, enemyBaseStats } from "./Enemy.jsx";
+import { Enemy, enemyBaseStats } from "../entities/Enemy";
 
 export class WaveManager {
   constructor(app, onEnemySpawned, onEnemyKilled, onEnemyReachedBase, customWaypoints = null, options = {}) {

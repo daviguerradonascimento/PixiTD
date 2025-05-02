@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { handlePlacement, sellTower as sellTowerLogic } from './towerUtils';
-import { screenToGrid } from './gridUtils';
+import { handlePlacement, sellTower as sellTowerLogic } from '../utils/towerUtils';
+import { screenToGrid } from '../utils/gridUtils';
 
 const REFUND_PERCENTAGE = 0.7;
 

@@ -1,4 +1,4 @@
-import { TILE_HEIGHT, GRID_SIZE, TILE_WIDTH } from "./gridUtils";
+import { GRID_SIZE, TILE_HEIGHT, TILE_WIDTH } from "./gridUtils.js";
 
 function toIsometric(col, row) {
   const x = (col - row) * (GRID_SIZE / 2);

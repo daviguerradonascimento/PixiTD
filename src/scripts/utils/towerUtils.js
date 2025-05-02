@@ -1,5 +1,5 @@
-import { Tower } from "./Tower.jsx";
-import { getBlockedTiles, gridConsts, toIsometric } from "./gridUtils.js";
+import { Tower } from "../entities/Tower";
+import { gridConsts, toIsometric, getBlockedTiles } from "./gridUtils";
 
 export function handlePlacement({
   col,

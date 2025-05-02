@@ -1,11 +1,12 @@
 import React, { useEffect } from "react";
 import * as PIXI from "pixi.js";
-import { screenToGrid, gridConsts } from "./gridUtils";
+import { screenToGrid, gridConsts } from "../utils/gridUtils";
 
-import basicImage from "../../sprites/basic.png";
-import sniperImage from "../../sprites/sniper.png";
-import rapidImage from "../../sprites/fast.png";
-import splashImage from "../../sprites/splash.png";
+// Import sprites from new location
+import basicImage from "../../assets/sprites/basic.png";
+import sniperImage from "../../assets/sprites/sniper.png";
+import rapidImage from "../../assets/sprites/fast.png";
+import splashImage from "../../assets/sprites/splash.png";
 
 import Tooltip from "./Tooltip.jsx";
 import {
@@ -14,13 +15,15 @@ import {
   GameInfo,
   TowerActionButtons,
 } from "./GameUIComponents.jsx";
-import { Tower } from "./Tower.jsx";
 
+import { Tower } from "../entities/Tower.jsx";
 import MiniPathPreview from "./MiniPathPreview";
-import useGameState from "./GameStateManager";
-import useAudioManager from "./AudioManager";
-import usePixiManager from "./PixiManager";
-import useTowerManager from "./TowerManager";
+
+// Import managers
+import useGameState from "../managers/GameStateManager";
+import useAudioManager from "../managers/AudioManager";
+import usePixiManager from "../managers/PixiManager";
+import useTowerManager from "../managers/TowerManager";
 
 const towerData = [
   { type: "basic", img: basicImage, name: "Basic", price: Tower.prototype.baseStats.basic.buildCost },

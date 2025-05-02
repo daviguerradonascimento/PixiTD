@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
-import TowerDefenseGame from "./game/GameComponent";
+import TowerDefenseGame from './components/GameComponent';
 import { Assets } from "pixi.js";
-import basicImage from "../sprites/basic.png";
-import sniperImage from "../sprites/sniper.png";
-import rapidImage from "../sprites/fast.png";
-import splashImage from "../sprites/splash.png";
-import tankImage from "../sprites/knight_level_3.png";
-import enemyImage from "../sprites/knight_level_2.png";
-import fastImage from "../sprites/knight_level_1.png";
+import basicImage from "../assets/sprites/basic.png";
+import sniperImage from "../assets/sprites/sniper.png";
+import rapidImage from "../assets/sprites/fast.png";
+import splashImage from "../assets/sprites/splash.png";
+import tankImage from "../assets/sprites/knight_level_3.png";
+import enemyImage from "../assets/sprites/knight_level_2.png";
+import fastImage from "../assets/sprites/knight_level_1.png";
 
 const assetList = [
   { alias: "basic", src: basicImage },
