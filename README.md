@@ -133,3 +133,12 @@ The procedural generation ensures no two games play exactly the same, creating v
 - utils: Helper functions and utility classes
 - assets: Game assets (sprites, audio)
 - webpack: Webpack configuration files
+
+## TODO
+
+- [ ] Balance boss wave difficulty and scaling
+- [ ] Enhance gold economy and scaling with wave progression
+- [ ] Add more sound effects and dynamic music transitions
+- [ ] Add more tower and enemy types for variety
+- [ ] Add settings menu (audio, graphics, controls)
+- [ ] Implement achievements or progression system
