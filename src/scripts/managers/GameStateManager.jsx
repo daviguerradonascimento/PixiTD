@@ -2,8 +2,8 @@ import { useEffect, useState, useRef } from 'react';
 
 export default function useGameState(gameMode, layoutConfig) {
   // Core game state
-  const [baseHealth, setBaseHealth] = useState(10);
-  const [gold, setGold] = useState(10000);
+  const [baseHealth, setBaseHealth] = useState(20);
+  const [gold, setGold] = useState(100);
   const [gameState, setGameState] = useState("build");
   const [currentWave, setCurrentWave] = useState(1);
   const [gameSpeed, setGameSpeed] = useState(1);

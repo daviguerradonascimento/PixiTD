@@ -15,7 +15,8 @@ export default function usePixiManager(
     gameStateRef, isPausedRef,
     setGameState, setCurrentWave,
     setGold, setBaseHealth,
-    placedTowersRef
+    placedTowersRef,
+    onBossWave
   }
 ) {
   const pixiContainerRef = useRef(null);
@@ -214,7 +215,12 @@ export default function usePixiManager(
         (enemy) => setGold((prev) => prev + (enemy.goldValue || 10)),
         (enemy) => setBaseHealth((prev) => Math.max(0, prev - enemy.damageValue)),
         initialWaypoints,
-        { cols, rows, gameMode }
+        { 
+          cols, 
+          rows, 
+          gameMode,
+          onBossWave // Pass the callback here
+        }
       );
       waveManagerRef.current = waveManager;
 
@@ -255,7 +261,7 @@ export default function usePixiManager(
         stage.children.sort((a, b) => a.y - b.y);
       });
     });
-  }, [cols, rows, gameMode, layoutConfig]);
+  }, [cols, rows, gameMode, layoutConfig, onBossWave]);
 
   // Add a method to reset the grid position
   const resetGridPosition = () => {

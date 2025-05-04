@@ -78,7 +78,7 @@ export class ProceduralLevelGenerator {
       endY = Math.floor(Math.random() * this.rows);
     }
 
-    // --- NEW: Generate random intermediate waypoints ---
+    // Generate random intermediate waypoints
     const numWaypoints = Math.floor(Math.random() * 2) + 2; // 2 or 3 waypoints
     const waypoints = [];
     for (let i = 0; i < numWaypoints; i++) {
@@ -99,9 +99,17 @@ export class ProceduralLevelGenerator {
     // Build the full path: start → waypoints... → end
     const points = [[startX, startY], ...waypoints, [endX, endY]];
     let path = [];
+    
     for (let i = 0; i < points.length - 1; i++) {
-      const segment = this.getPath(points[i][0], points[i][1], points[i + 1][0], points[i + 1][1]);
-      // Avoid duplicating the connecting point
+      const [fromX, fromY] = points[i];
+      const [toX, toY] = points[i + 1];
+    
+      const forbidden = new Set();
+      // Block start and end unless this segment starts or ends there
+      if (i !== 0) forbidden.add(`${startX},${startY}`);
+      if (i !== points.length - 2) forbidden.add(`${endX},${endY}`);
+    
+      const segment = this.getPath(fromX, fromY, toX, toY, forbidden);
       if (i > 0 && segment.length > 0) segment.shift();
       path = path.concat(segment);
     }
@@ -117,43 +125,45 @@ export class ProceduralLevelGenerator {
     return this.grid;
   }
 
-  getPath(startX, startY, endX, endY) {
-    const queue = [[startX, startY, [[startX, startY]]]]; // [x, y, path]
+  getPath(startX, startY, endX, endY, forbidden = new Set()) {
+    const queue = [[startX, startY, [[startX, startY]]]];
     const visited = new Set();
     visited.add(`${startX},${startY}`);
-
+  
     while (queue.length > 0) {
       const [x, y, path] = queue.shift();
-
+  
       if (x === endX && y === endY) {
         return path;
       }
-
+  
       const possibleMoves = [
         { dx: 1, dy: 0 },
         { dx: -1, dy: 0 },
         { dx: 0, dy: 1 },
         { dx: 0, dy: -1 },
       ];
-
+  
       for (const move of possibleMoves) {
         const newX = x + move.dx;
         const newY = y + move.dy;
-
+        const key = `${newX},${newY}`;
+  
         if (
           newX >= 0 &&
           newX < this.cols &&
           newY >= 0 &&
           newY < this.rows &&
-          !visited.has(`${newX},${newY}`)
+          !visited.has(key) &&
+          !forbidden.has(key)
         ) {
-          visited.add(`${newX},${newY}`);
+          visited.add(key);
           const newPath = [...path, [newX, newY]];
           queue.push([newX, newY, newPath]);
         }
       }
     }
-
+  
     return []; // No path found
   }
 

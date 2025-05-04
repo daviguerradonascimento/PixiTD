@@ -5,9 +5,17 @@ const MiniPathPreview = ({ gridWaypoints, cols, rows, visible, width = 280, heig
   const padding = 15;
 
   useEffect(() => {
-    if (!visible || !canvasRef.current || !gridWaypoints?.length) return;
+    // Only run this effect when the component is visible and we have waypoints
+    if (!visible || !gridWaypoints?.length) return;
     
-    const ctx = canvasRef.current.getContext("2d");
+    // Make sure the canvas ref exists
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    
+    // Clear the entire canvas
     ctx.clearRect(0, 0, width, height);
 
     // Draw background
@@ -16,9 +24,11 @@ const MiniPathPreview = ({ gridWaypoints, cols, rows, visible, width = 280, heig
     ctx.fillRect(0, 0, width, height);
     ctx.globalAlpha = 1;
 
-    // Draw grid
+    // Calculate cell dimensions
     const cellW = (width - padding * 2) / cols;
     const cellH = (height - padding * 2) / rows;
+    
+    // Draw grid lines
     ctx.strokeStyle = "#444";
     ctx.lineWidth = 1;
     
@@ -37,19 +47,21 @@ const MiniPathPreview = ({ gridWaypoints, cols, rows, visible, width = 280, heig
     }
 
     // Draw path
-    ctx.strokeStyle = "#66ccff";
-    ctx.lineWidth = 4;
-    ctx.lineJoin = "round";
-    ctx.beginPath();
-    
-    gridWaypoints.forEach(([col, row], idx) => {
-      const cx = padding + (col + 0.5) * cellW;
-      const cy = padding + (row + 0.5) * cellH;
-      if (idx === 0) ctx.moveTo(cx, cy);
-      else ctx.lineTo(cx, cy);
-    });
-    
-    ctx.stroke();
+    if (gridWaypoints.length > 1) {
+      ctx.strokeStyle = "#66ccff";
+      ctx.lineWidth = 4;
+      ctx.lineJoin = "round";
+      ctx.beginPath();
+      
+      gridWaypoints.forEach(([col, row], idx) => {
+        const cx = padding + (col + 0.5) * cellW;
+        const cy = padding + (row + 0.5) * cellH;
+        if (idx === 0) ctx.moveTo(cx, cy);
+        else ctx.lineTo(cx, cy);
+      });
+      
+      ctx.stroke();
+    }
 
     // Draw start/end
     if (gridWaypoints.length > 0) {
@@ -96,44 +108,23 @@ const MiniPathPreview = ({ gridWaypoints, cols, rows, visible, width = 280, heig
         boxShadow: "0 4px 20px #000a",
         pointerEvents: "none",
         boxSizing: "border-box",
-        overflow: "hidden", // Keep children inside the border radius
-        maxWidth: "calc(100vw - 40px)",
-        maxHeight: "calc(100vh - 40px)",
+        overflow: "hidden",
+        width: width + 20, // Add padding to the container width
+        height: height + 20, // Add padding to the container height
+        padding: 10,
       }}
     >
-      {/* Title bar that spans the full width */}
-      <div style={{
-        width: "100%",
-        textAlign: "center",
-        padding: "10px 10px 5px 10px",
-        borderBottom: "1px solid #4488aa",
-        background: "rgba(35,35,50,0.97)", // Slightly different to create visual separation
-        zIndex: 3,
-      }}>
-        <div style={{
-          color: "#66ccff",
-          fontWeight: "bold",
-          fontSize: "1.3em",
-          letterSpacing: "1px",
-        }}>
-          Path Preview
-        </div>
-      </div>
-      
-      {/* Canvas with padding */}
-      <div style={{ padding: 10 }}>
-        <canvas
-          ref={canvasRef}
-          width={width}
-          height={height}
-          style={{
-            display: "block",
-            borderRadius: 8,
-            maxWidth: "100%",
-            maxHeight: "100%",
-          }}
-        />
-      </div>
+      <canvas
+        ref={canvasRef}
+        width={width}
+        height={height}
+        style={{
+          display: "block",
+          borderRadius: 8,
+          width: width,   // Explicitly set width
+          height: height, // Explicitly set height
+        }}
+      />
     </div>
   );
 };

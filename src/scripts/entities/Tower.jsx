@@ -147,11 +147,11 @@ export class Tower extends PIXI.Container {
   }
 
   update(enemies, gameSpeed) {
-    if ((this.fireTimer / gameSpeed) > 0) {
-      this.fireTimer--;
+    if (this.fireTimer > 0) {
+      this.fireTimer -= gameSpeed;
       return;
     }
-  
+    
     const target = this.getTarget(enemies);
     if (target) {
       this.attack(target, enemies);
@@ -235,8 +235,8 @@ export class Tower extends PIXI.Container {
 }
 
 Tower.prototype.baseStats = {
-  basic:   { damage: 5, color: 0x3399ff, range: 100, cooldown: 60, upgradeCost: 50, buildCost: 50, targetStrategy: "first" },
-  sniper:  { damage: 7, color: 0xffcc00, range: 200, cooldown: 120, upgradeCost: 80, buildCost: 75, targetStrategy: "strongest" },
-  rapid:   { damage: 3, color: 0xffb300, range: 80, cooldown: 20, upgradeCost: 60, buildCost: 60, targetStrategy: "closest" },
-  splash:  { damage: 2, color: 0xff3333, range: 100, cooldown: 80, upgradeCost: 70, buildCost: 70, targetStrategy: "first" },
+  basic:   { damage: 8, color: 0x3399ff, range: 100, cooldown: 50, upgradeCost: 75, buildCost: 50, targetStrategy: "first" },
+  sniper:  { damage: 15, color: 0xffcc00, range: 200, cooldown: 100, upgradeCost: 110, buildCost: 80, targetStrategy: "strongest" },
+  rapid:   { damage: 3, color: 0xffb300, range: 80, cooldown: 15, upgradeCost: 85, buildCost: 65, targetStrategy: "closest" },
+  splash:  { damage: 5, color: 0xff3333, range: 110, cooldown: 70, upgradeCost: 90, buildCost: 75, targetStrategy: "first" },
 };

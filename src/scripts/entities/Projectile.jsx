@@ -22,7 +22,6 @@ export class Projectile extends PIXI.Graphics {
   }
 
   update(gameSpeed) {
-    console.log(this.damage,this.color);
     if (!this.target || this.target.destroyed) {
       this.destroy();
       return;

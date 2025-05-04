@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import * as PIXI from "pixi.js";
 import { screenToGrid, gridConsts } from "../utils/gridUtils";
 
@@ -18,6 +18,7 @@ import {
 
 import { Tower } from "../entities/Tower.jsx";
 import MiniPathPreview from "./MiniPathPreview";
+import BossWaveNotification from './BossWaveNotification';
 
 // Import managers
 import useGameState from "../managers/GameStateManager";
@@ -36,6 +37,12 @@ export default function TowerDefenseGame({ gameMode, layoutConfig = null, onRetu
   // Use our custom hooks to manage different aspects of the game
   const gameState = useGameState(gameMode, layoutConfig);
   
+  const [showBossWarning, setShowBossWarning] = useState(false);
+
+  const handleBossWave = useCallback(() => {
+    setShowBossWarning(true);
+  }, []);
+
   const pixiManager = usePixiManager(
     gameState.gameState,
     {
@@ -54,7 +61,8 @@ export default function TowerDefenseGame({ gameMode, layoutConfig = null, onRetu
       setCurrentWave: gameState.setCurrentWave,
       setGold: gameState.setGold, 
       setBaseHealth: gameState.setBaseHealth,
-      placedTowersRef: gameState.placedTowersRef
+      placedTowersRef: gameState.placedTowersRef,
+      onBossWave: handleBossWave
     }
   );
   
@@ -81,7 +89,7 @@ export default function TowerDefenseGame({ gameMode, layoutConfig = null, onRetu
     selectedTowerRef: gameState.selectedTowerRef,
     isPanningRef: pixiManager.isPanningRef
   });
-  
+
   // Initialize game and handle cleanup
   useEffect(() => {
     pixiManager.initializeGame();
@@ -285,27 +293,33 @@ export default function TowerDefenseGame({ gameMode, layoutConfig = null, onRetu
           stats={gameState.tooltip.stats} 
         />
       )}
-<button
-  style={{
-    position: "absolute",
-    bottom: "calc(280px + 30px)", // Position it above the MiniPathPreview (height + margin)
-    right: "20px",
-    zIndex: 50,
-    padding: "8px 16px",
-    background: "rgba(30, 30, 40, 0.8)",
-    color: "#66ccff",
-    border: "2px solid #66ccff",
-    borderRadius: "8px",
-    fontWeight: "bold",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px"
-  }}
-  onClick={pixiManager.resetGridPosition}
->
-  <span style={{ fontSize: "1.2em" }}>⌖</span> Center Grid
-</button>
+
+      <BossWaveNotification
+        isVisible={showBossWarning}
+        onAnimationComplete={() => setShowBossWarning(false)}
+      />
+
+      <button
+        style={{
+          position: "absolute",
+          bottom: gameState.gameState === "build" ? `${Math.min(280, window.innerHeight * 0.3) + 50}px` : "20px",
+          right: "20px",
+          zIndex: 50,
+          padding: "8px 16px",
+          background: "rgba(30, 30, 40, 0.8)",
+          color: "#66ccff",
+          border: "2px solid #66ccff",
+          borderRadius: "8px",
+          fontWeight: "bold",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px"
+        }}
+        onClick={pixiManager.resetGridPosition}
+      >
+        <span style={{ fontSize: "1.2em" }}>⌖</span> Center Grid
+      </button>
       <div ref={pixiManager.pixiContainerRef} style={{ width: "100%", height: "100%" }} />
     </div>
   );

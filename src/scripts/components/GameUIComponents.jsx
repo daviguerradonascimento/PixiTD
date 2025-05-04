@@ -17,29 +17,26 @@ const uiButtonStyle = (color, borderColor, disabled, extra = {}) => ({
   });
   
   export function TowerTypeButton({ type, img, name, price, isSelected, onMouseDown, onMouseUp, disabled }) {
-    // Use ref to store the event handlers
+
     const imgRef = useRef(null);
     
-    // Set up touch event listeners with passive: false when component mounts
     useEffect(() => {
       const imgElement = imgRef.current;
       if (!imgElement) return;
       
       const handleTouchStart = (e) => {
-        e.preventDefault(); // Now this will work
+        e.preventDefault();
         onMouseDown();
       };
       
       const handleTouchEnd = (e) => {
-        e.preventDefault(); // Now this will work
+        e.preventDefault();
         onMouseUp();
       };
       
-      // Add event listeners with passive: false
       imgElement.addEventListener('touchstart', handleTouchStart, { passive: false });
       imgElement.addEventListener('touchend', handleTouchEnd, { passive: false });
       
-      // Clean up
       return () => {
         imgElement.removeEventListener('touchstart', handleTouchStart);
         imgElement.removeEventListener('touchend', handleTouchEnd);
@@ -49,7 +46,7 @@ const uiButtonStyle = (color, borderColor, disabled, extra = {}) => ({
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 64, opacity: disabled ? 0.5 : 1 }}>
         <img
-          ref={imgRef} // Add this ref
+          ref={imgRef}
           src={img}
           alt={type}
           draggable={false}
@@ -62,7 +59,7 @@ const uiButtonStyle = (color, borderColor, disabled, extra = {}) => ({
             background: "#222",
             touchAction: "none",
           }}
-          onMouseDown={onMouseDown} // Keep basic mouse handlers
+          onMouseDown={onMouseDown}
           onMouseUp={onMouseUp}
         />
         <div style={{
