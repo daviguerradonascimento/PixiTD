@@ -83,7 +83,7 @@ Infinity mode utilizes several sophisticated techniques to create endless, uniqu
 
 1. **Edge-Based Start/End Points**: Entry and exit points are strategically placed along different edges of the map, creating natural flow while preventing awkward path configurations.
 
-2. **Progressive Difficulty Scaling**: Enemy stats (health, speed, damage) scale with wave number using non-linear progression formulas that maintain challenge without becoming impossible.
+2. **Progressive Difficulty Scaling**: Enemy stats (health, damage) scale with wave number using non-linear progression formulas that maintain challenge without becoming impossible.
 
 3. **Boss Wave Mechanics**: Every fifth wave introduces special "boss" enemies with significantly enhanced stats and visual indicators, creating natural rhythm and milestone moments.
 
